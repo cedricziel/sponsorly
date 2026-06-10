@@ -36,9 +36,17 @@ final class WebAuthenticator: NSObject, ASWebAuthenticationPresentationContextPr
     }
 
     func presentationAnchor(for _: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first { $0.activationState == .foregroundActive }
-        return scene?.keyWindow ?? ASPresentationAnchor()
+        guard let window = Self.activeWindow() else {
+            // The system only queries this while presenting, i.e. with a
+            // foreground window on screen, so this is an unreachable state.
+            preconditionFailure("No active window scene to present over")
+        }
+        return window
+    }
+
+    private static func activeWindow() -> UIWindow? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        return scene?.keyWindow ?? scene?.windows.first
     }
 }
