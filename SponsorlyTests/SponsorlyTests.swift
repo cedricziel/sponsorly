@@ -1,5 +1,5 @@
-import XCTest
 @testable import Sponsorly
+import XCTest
 
 final class SponsorlyTests: XCTestCase {
     func testBootstraps() {
