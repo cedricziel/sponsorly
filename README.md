@@ -4,8 +4,8 @@ iOS app for managing Amazon Ads campaigns (Sponsored Products, Sponsored Brands,
 
 ## Requirements
 
-- Xcode 16+
-- iOS 17.0+ deployment target
+- Xcode 17+ (iOS 26 SDK)
+- iOS 26.0+ deployment target
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
 
 ## Setup
@@ -36,6 +36,6 @@ SponsorlyTests/
 ## Build & test from the CLI
 
 ```sh
-xcodebuild -scheme Sponsorly -destination 'platform=iOS Simulator,name=iPhone 16' build
-xcodebuild -scheme Sponsorly -destination 'platform=iOS Simulator,name=iPhone 16' test
+xcodebuild -scheme Sponsorly -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+xcodebuild -scheme Sponsorly -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```

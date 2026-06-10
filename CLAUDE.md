@@ -1,6 +1,6 @@
 # Sponsorly
 
-iOS app for managing Amazon Ads campaigns (Sponsored Products, Sponsored Brands, Sponsored Display). SwiftUI, iOS 17+, Swift 5.10 with strict concurrency.
+iOS app for managing Amazon Ads campaigns (Sponsored Products, Sponsored Brands, Sponsored Display). SwiftUI, iOS 26+, Swift 5.10 with strict concurrency.
 
 ## Project generation
 
