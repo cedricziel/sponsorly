@@ -8,6 +8,11 @@ options:
   groupSortPosition: top
   generateEmptyDirectories: true
 
+packages:
+  AmazonAds:
+    url: https://github.com/cedricziel/swift-amazon-ads
+    branch: main
+
 settings:
   base:
     SWIFT_VERSION: "5.10"
@@ -22,6 +27,15 @@ targets:
     platform: iOS
     sources:
       - path: Sponsorly
+    dependencies:
+      - package: AmazonAds
+        product: AmazonAdsCore
+      - package: AmazonAds
+        product: AmazonAdsProfilesAPIv2
+      - package: AmazonAds
+        product: AmazonAdsSponsoredProductsAPIv3
+      - package: AmazonAds
+        product: AmazonAdsReportingAPIv3
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.sponsorly
