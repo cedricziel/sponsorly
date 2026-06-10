@@ -29,3 +29,7 @@ Pods/
 *.env
 *.env.local
 secrets.plist
+Secrets.xcconfig
+
+# XcodeGen-generated Info.plist
+Sponsorly/Info.plist

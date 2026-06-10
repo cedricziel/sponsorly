@@ -20,6 +20,8 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     SWIFT_STRICT_CONCURRENCY: complete
+    DEVELOPMENT_TEAM: WPW3QSLZ2F
+    CODE_SIGN_STYLE: Automatic
 
 targets:
   Sponsorly:
@@ -36,15 +38,42 @@ targets:
         product: AmazonAdsSponsoredProductsAPIv3
       - package: AmazonAds
         product: AmazonAdsReportingAPIv3
+    # LWA credentials are injected from a git-ignored xcconfig (see Secrets.example.xcconfig).
+    configFiles:
+      Debug: Secrets.xcconfig
+      Release: Secrets.xcconfig
+    # Info.plist is managed by XcodeGen so we can declare the OAuth URL scheme and
+    # surface the LWA credentials (read at runtime via Bundle.main).
+    info:
+      path: Sponsorly/Info.plist
+      properties:
+        CFBundleDisplayName: Sponsorly
+        LSRequiresIPhoneOS: true
+        # Only exempt encryption is used (HTTPS/TLS, Keychain, SHA-256 for PKCE).
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        LWAClientID: $(LWA_CLIENT_ID)
+        LWAClientSecret: $(LWA_CLIENT_SECRET)
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: com.cedricziel.sponsorly.oauth
+            CFBundleURLSchemes:
+              - amzn-com.cedricziel.sponsorly
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.sponsorly
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Sponsorly
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        GENERATE_INFOPLIST_FILE: NO
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_PREVIEWS: YES
         DEVELOPMENT_ASSET_PATHS: "\"Sponsorly/Preview Content\""
