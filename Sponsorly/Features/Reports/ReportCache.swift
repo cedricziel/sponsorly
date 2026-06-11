@@ -31,9 +31,9 @@ actor ReportCache {
         }
     }
 
-    func load(_ key: ReportCacheKey) -> [CampaignReportRow]? {
+    func load<Row: Codable>(_ key: ReportCacheKey, as _: Row.Type = Row.self) -> [Row]? {
         guard let data = try? Data(contentsOf: fileURL(key)),
-              let entry = try? JSONDecoder().decode(Entry.self, from: data),
+              let entry = try? JSONDecoder().decode(Entry<Row>.self, from: data),
               entry.expiresAt > Date()
         else {
             return nil
@@ -41,7 +41,7 @@ actor ReportCache {
         return entry.rows
     }
 
-    func save(_ rows: [CampaignReportRow], for key: ReportCacheKey, ttl: TimeInterval) {
+    func save(_ rows: [some Codable], for key: ReportCacheKey, ttl: TimeInterval) {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let entry = Entry(rows: rows, expiresAt: Date().addingTimeInterval(ttl))
         if let data = try? JSONEncoder().encode(entry) {
@@ -53,8 +53,8 @@ actor ReportCache {
         directory.appendingPathComponent(key.filename)
     }
 
-    private struct Entry: Codable {
-        let rows: [CampaignReportRow]
+    private struct Entry<Row: Codable>: Codable {
+        let rows: [Row]
         let expiresAt: Date
     }
 }

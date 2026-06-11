@@ -22,6 +22,7 @@ final class HarvestViewModel {
 
     let sourceCampaign: Campaign
     private let accounts: AccountsViewModel
+    private let cache = ReportCache()
 
     var step: Step = .criteria
     var criteria = HarvestCriteria()
@@ -84,19 +85,34 @@ final class HarvestViewModel {
             return
         }
         let (start, end) = SpendOverviewViewModel.reportRange()
+        let cacheKey = ReportCacheKey(
+            profileId: scoped.profileId, reportTypeId: "spSearchTerm",
+            startDate: start, endDate: end, timeUnit: "SUMMARY"
+        )
+        // The report covers "30 days ending yesterday" (immutable) and spans the
+        // whole profile, so a cached copy is reused across harvests of any campaign.
+        if let cached: [SearchTermReportRow] = await cache.load(cacheKey, as: SearchTermReportRow.self) {
+            apply(rows: cached)
+            return
+        }
         let request = ReportRequest.spSearchTerm(name: "harvest", startDate: start, endDate: end)
         do {
             let rows: [SearchTermReportRow] = try await ReportingRepository(scopedClient: scoped)
                 .fetchRows(request)
-            // The report spans the whole profile; keep only this campaign's terms.
-            let campaignRows = rows.filter { $0.campaignId == sourceCampaign.campaignId }
-            allTerms = HarvestScorer.searchTerms(from: campaignRows)
-            selectedGraduate = Set(graduateTerms.map(\.id))
-            selectedNegate = Set(negateTerms.map(\.id))
+            await cache.save(rows, for: cacheKey, ttl: ReportCache.immutableTTL)
+            apply(rows: rows)
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             errorResponseBody = apiResponseBody(from: error)
         }
+    }
+
+    /// Filters the profile-wide report to this campaign and pre-selects the buckets.
+    private func apply(rows: [SearchTermReportRow]) {
+        let campaignRows = rows.filter { $0.campaignId == sourceCampaign.campaignId }
+        allTerms = HarvestScorer.searchTerms(from: campaignRows)
+        selectedGraduate = Set(graduateTerms.map(\.id))
+        selectedNegate = Set(negateTerms.map(\.id))
     }
 
     func loadTargets() async {

@@ -23,19 +23,19 @@ final class ReportCacheTests: XCTestCase {
     func testRoundTrip() async {
         let cache = tempCache()
         await cache.save([row(cost: 5)], for: key, ttl: 60)
-        let loaded = await cache.load(key)
+        let loaded = await cache.load(key, as: CampaignReportRow.self)
         XCTAssertEqual(loaded?.first?.cost, 5)
     }
 
     func testExpiredReturnsNil() async {
         let cache = tempCache()
         await cache.save([row(cost: 5)], for: key, ttl: -1)
-        let loaded = await cache.load(key)
+        let loaded = await cache.load(key, as: CampaignReportRow.self)
         XCTAssertNil(loaded)
     }
 
     func testMissingReturnsNil() async {
-        let loaded = await tempCache().load(key)
+        let loaded = await tempCache().load(key, as: CampaignReportRow.self)
         XCTAssertNil(loaded)
     }
 

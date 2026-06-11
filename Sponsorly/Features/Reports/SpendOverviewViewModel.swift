@@ -46,8 +46,8 @@ final class SpendOverviewViewModel {
         let dailyKey = key(scoped, start: start, end: end, timeUnit: "DAILY")
 
         // Render cached report data immediately.
-        if let cached = await cache.load(summaryKey) { applySummary(cached) }
-        if let cached = await cache.load(dailyKey) { applyDaily(cached) }
+        if let cached = await cache.load(summaryKey, as: CampaignReportRow.self) { applySummary(cached) }
+        if let cached = await cache.load(dailyKey, as: CampaignReportRow.self) { applyDaily(cached) }
 
         // Refresh all three sources in parallel.
         async let todayTask = Self.fetchTodaySpend(scoped)

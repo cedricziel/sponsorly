@@ -81,7 +81,7 @@ extension KeyedDecodingContainer {
 }
 
 /// A decoded row from a Sponsored Products search-term report.
-struct SearchTermReportRow: Decodable, Hashable {
+struct SearchTermReportRow: Codable, Hashable {
     let searchTerm: String?
     let campaignId: String?
     let adGroupId: String?

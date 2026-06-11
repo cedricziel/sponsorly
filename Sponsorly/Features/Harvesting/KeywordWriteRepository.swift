@@ -112,7 +112,7 @@ actor KeywordWriteRepository {
         let (data, response) = try await urlSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw CampaignsError.invalidResponse }
         guard (200 ..< 300).contains(http.statusCode) else {
-            throw CampaignsError.http(status: http.statusCode)
+            throw CampaignsError.http(status: http.statusCode, body: httpResponseBody(data))
         }
         return data
     }
