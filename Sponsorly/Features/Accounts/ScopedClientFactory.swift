@@ -12,13 +12,17 @@ enum ScopedClientError: LocalizedError {
     }
 }
 
-/// An `AuthenticatedTransport` scoped to the active profile, plus the region base
-/// URL — the single seam data features use to make profile-scoped API calls.
+/// Everything a data feature needs to make profile-scoped Amazon Ads calls for
+/// the active profile: the region base URL, the `client_id`, the `profileId`
+/// scope, a token provider, and a ready `AuthenticatedTransport` (for callers
+/// that prefer the generated clients).
 struct ScopedClient: Sendable {
     let transport: AuthenticatedTransport
     let baseURL: URL
     let region: AmazonRegion
     let profileId: String
+    let clientID: String
+    let tokenProvider: @Sendable () async throws -> String
 }
 
 enum ActiveProfileClientFactory {
@@ -41,7 +45,9 @@ enum ActiveProfileClientFactory {
             transport: transport,
             baseURL: selection.region.advertisingAPIBaseURL,
             region: selection.region,
-            profileId: selection.profileId
+            profileId: selection.profileId,
+            clientID: clientID,
+            tokenProvider: provider
         )
     }
 }

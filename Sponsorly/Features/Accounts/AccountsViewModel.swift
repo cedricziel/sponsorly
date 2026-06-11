@@ -67,6 +67,17 @@ final class AccountsViewModel {
         reconcileActive()
     }
 
+    /// Builds an active-profile-scoped client for data features.
+    /// - Throws: `ScopedClientError.noActiveProfile` / `LWAError.missingCredentials`.
+    func scopedClient() throws -> ScopedClient {
+        guard let clientID else { throw LWAError.missingCredentials }
+        return try ActiveProfileClientFactory.make(
+            selection: activeSelection,
+            clientID: clientID,
+            tokenProvider: { region in try self.auth.tokenProvider(for: region) }
+        )
+    }
+
     func select(_ profile: AdvertisingProfile) {
         let selection = ActiveProfileSelection(region: profile.region, profileId: profile.profileId)
         activeSelection = selection

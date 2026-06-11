@@ -137,6 +137,7 @@ final class ScopedClientFactoryTests: XCTestCase {
         )
         XCTAssertEqual(client.profileId, "777")
         XCTAssertEqual(client.region, .europe)
+        XCTAssertEqual(client.clientID, "cid")
         XCTAssertEqual(client.baseURL, AmazonRegion.europe.advertisingAPIBaseURL)
     }
 }
