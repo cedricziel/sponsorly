@@ -7,6 +7,7 @@ enum ReportError: LocalizedError {
     case timedOut
     case missingDownloadURL
     case decompressionFailed
+    case malformedResponse(body: String?)
 
     var errorDescription: String? {
         switch self {
@@ -16,6 +17,7 @@ enum ReportError: LocalizedError {
         case .timedOut: "The report took too long to generate."
         case .missingDownloadURL: "The completed report had no download URL."
         case .decompressionFailed: "Couldn't read the downloaded report."
+        case .malformedResponse: "The report wasn't in the expected format."
         }
     }
 }
@@ -82,7 +84,11 @@ actor ReportingRepository {
             throw ReportError.http(status: http.statusCode, body: httpResponseBody(data))
         }
         guard let json = ReportGunzip.decompress(data) else { throw ReportError.decompressionFailed }
-        return try JSONDecoder().decode([Row].self, from: json)
+        do {
+            return try JSONDecoder().decode([Row].self, from: json)
+        } catch {
+            throw ReportError.malformedResponse(body: httpResponseBody(json, limit: 2000))
+        }
     }
 
     // MARK: - HTTP

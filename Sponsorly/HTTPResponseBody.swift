@@ -10,7 +10,10 @@ func httpResponseBody(_ data: Data, limit: Int = 2000) -> String? {
 /// Extracts the raw Amazon response body from one of our HTTP errors, for display
 /// in a copyable code block.
 func apiResponseBody(from error: Error) -> String? {
-    if let error = error as? ReportError, case let .http(_, body) = error { return body }
+    if let error = error as? ReportError {
+        if case let .http(_, body) = error { return body }
+        if case let .malformedResponse(body) = error { return body }
+    }
     if let error = error as? CampaignsError, case let .http(_, body) = error { return body }
     if let error = error as? AccountsError, case let .http(_, body) = error { return body }
     return nil
