@@ -26,9 +26,11 @@ Constraints unchanged: SwiftUI, iOS 26, Swift 5.10, `SWIFT_STRICT_CONCURRENCY=co
 
 Replace `AuthViewModel`'s single `selectedRegion` with per-region connection state — connected regions derived from "has a stored refresh token for this region." Sign in/out operate on a specific region. The connected set is implied by storage (already keyed per region), so little new persistence is needed. **Trade-off:** this refactors just-shipped auth code; mitigated by the existing token-provider tests and keeping `LWAAuthService` per-region as-is (we just build one per region as needed).
 
-### D2: Account discovery — parallel per-region fetch
+### D2: Account discovery — parallel per-region direct fetch (revised)
 
-For each connected region, in parallel: (a) `listProfiles` via `AmazonAdsProfilesAPIv2` on an `AuthenticatedTransport` with **`profileId: nil`** (discovery isn't profile-scoped); (b) a direct `GET <region base>/managerAccounts`. Merge per region, then across regions. Failures are isolated per region (see D6). **Alternative:** legacy `AmazonAdvertisingClient.fetchProfiles/fetchManagerAccounts` — rejected: it's the desktop/loopback client; we use the generated ProfilesAPIv2 + a direct managerAccounts request to stay on the modern stack.
+For each connected region, in parallel: a direct `GET <region base>/v2/profiles` (decoded as `[AmazonProfile]`) and `GET <region base>/managerAccounts` (decoded as `AmazonManagerAccountsResponse`), each with `Authorization: Bearer` + `Amazon-Advertising-API-ClientId` (no scope header — discovery isn't profile-scoped). Merge per region, then across regions; failures isolated per region (D6).
+
+**Revised from the original plan** (generated `AmazonAdsProfilesAPIv2.listProfiles`): the generated client adds friction here — `Int64` profile ids, enum country codes, and verbose `Input.Headers`/`Output` wrappers — whereas a direct request decodes straight into the package's clean `AmazonProfile` (String `profileId`), uniform with the `/managerAccounts` call which has no generated client anyway. The generated SP/Reporting clients remain the path for the actual data features (via the scoped transport, D5).
 
 ### D3: Aggregated account model
 
