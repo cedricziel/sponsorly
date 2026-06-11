@@ -57,8 +57,8 @@ final class LWAAuthServiceTests: XCTestCase {
             clientID: "client-id",
             clientSecret: "client-secret",
             region: region,
-            redirectURI: "amzn-com.cedricziel.sponsorly://oauth",
-            callbackScheme: "amzn-com.cedricziel.sponsorly",
+            redirectURI: "http://localhost:8765/callback",
+            callbackPort: 8765,
             scopes: ["profile", "advertising::campaign_management"]
         )
     }
@@ -101,11 +101,19 @@ final class LWAAuthServiceTests: XCTestCase {
 
         XCTAssertEqual(value("client_id"), "client-id")
         XCTAssertEqual(value("response_type"), "code")
-        XCTAssertEqual(value("redirect_uri"), "amzn-com.cedricziel.sponsorly://oauth")
+        XCTAssertEqual(value("redirect_uri"), "http://localhost:8765/callback")
         XCTAssertEqual(value("scope"), "profile advertising::campaign_management")
         XCTAssertEqual(value("code_challenge_method"), "S256")
         XCTAssertEqual(value("state"), request.state)
         XCTAssertEqual(value("code_challenge"), PKCE.codeChallenge(for: request.codeVerifier))
+        // Region-correct authorize host (EU here), not the package's NA default.
+        XCTAssertEqual(request.url.host, "eu.account.amazon.com")
+    }
+
+    func testRegionAuthorizeEndpoints() {
+        XCTAssertEqual(AmazonRegion.northAmerica.lwaAuthorizeURL.host, "www.amazon.com")
+        XCTAssertEqual(AmazonRegion.europe.lwaAuthorizeURL.host, "eu.account.amazon.com")
+        XCTAssertEqual(AmazonRegion.farEast.lwaAuthorizeURL.host, "apac.account.amazon.com")
     }
 
     // MARK: - Token provider state machine

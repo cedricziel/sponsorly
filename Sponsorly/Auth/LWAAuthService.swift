@@ -42,7 +42,7 @@ actor LWAAuthService {
         let state = UUID().uuidString
 
         guard var components = URLComponents(
-            url: config.region.authorizationURL,
+            url: config.region.lwaAuthorizeURL,
             resolvingAgainstBaseURL: false
         ) else {
             throw LWAError.invalidResponse

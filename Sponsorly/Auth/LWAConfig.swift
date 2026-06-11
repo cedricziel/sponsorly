@@ -10,14 +10,14 @@ struct LWAConfig {
     let clientSecret: String
     let region: AmazonRegion
     let redirectURI: String
-    let callbackScheme: String
+    let callbackPort: UInt16
     let scopes: [String]
 
-    /// Custom URL scheme registered in `CFBundleURLTypes` and as an Allowed Return
-    /// URL on the LWA Security Profile. Amazon's documented native format is
-    /// `amzn-<bundleID>`.
-    static let defaultCallbackScheme = "amzn-com.cedricziel.sponsorly"
-    static let defaultRedirectURI = "amzn-com.cedricziel.sponsorly://oauth"
+    /// Loopback redirect captured by an in-app HTTP server. Registered as an
+    /// Allowed Return URL on the LWA Security Profile (Amazon special-cases
+    /// `http://localhost` for the authorization-code grant).
+    static let defaultCallbackPort: UInt16 = 8765
+    static let defaultRedirectURI = "http://localhost:8765/callback"
     static let defaultScopes = ["profile", "advertising::campaign_management"]
     /// Region selection UI is out of scope for now; default to Europe.
     static let defaultRegion: AmazonRegion = .europe
@@ -38,7 +38,7 @@ struct LWAConfig {
             clientSecret: clientSecret,
             region: region,
             redirectURI: defaultRedirectURI,
-            callbackScheme: defaultCallbackScheme,
+            callbackPort: defaultCallbackPort,
             scopes: defaultScopes
         )
     }

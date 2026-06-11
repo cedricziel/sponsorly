@@ -65,11 +65,6 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         LWAClientID: $(LWA_CLIENT_ID)
         LWAClientSecret: $(LWA_CLIENT_SECRET)
-        CFBundleURLTypes:
-          - CFBundleTypeRole: Editor
-            CFBundleURLName: com.cedricziel.sponsorly.oauth
-            CFBundleURLSchemes:
-              - amzn-com.cedricziel.sponsorly
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cedricziel.sponsorly

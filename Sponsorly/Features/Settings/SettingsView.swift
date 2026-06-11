@@ -1,3 +1,4 @@
+import AmazonAdsCore
 import SwiftUI
 
 struct SettingsView: View {
@@ -17,10 +18,24 @@ struct SettingsView: View {
                                 .labelStyle(.titleAndIcon)
                                 .foregroundStyle(.green)
                         }
+                        LabeledContent("Region", value: auth.selectedRegion.displayName)
                         Button("Sign Out", role: .destructive) {
                             Task { await auth.signOut() }
                         }
                     } else {
+                        Picker(
+                            "Region",
+                            selection: Binding(
+                                get: { auth.selectedRegion },
+                                set: { auth.selectRegion($0) }
+                            )
+                        ) {
+                            ForEach(AmazonRegion.allCases) { region in
+                                Text(region.displayName).tag(region)
+                            }
+                        }
+                        .disabled(auth.isBusy)
+
                         Button {
                             Task { await auth.signIn() }
                         } label: {
