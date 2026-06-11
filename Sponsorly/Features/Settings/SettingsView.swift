@@ -22,6 +22,15 @@ struct SettingsView: View {
                         + "Accounts from all connected regions appear together.")
                 }
 
+                Section("Advertising") {
+                    NavigationLink {
+                        AccountsView(auth: auth)
+                    } label: {
+                        Text("Accounts")
+                    }
+                    .disabled(auth.connectedRegions.isEmpty)
+                }
+
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.appVersion)
                 }
