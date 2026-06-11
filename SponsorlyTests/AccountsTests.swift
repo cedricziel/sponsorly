@@ -44,12 +44,39 @@ final class AdvertisingAccountAggregatorTests: XCTestCase {
         XCTAssertEqual(merged.countryCode, "DE") // retained from standalone
     }
 
+    func testLinkedProfileDerivesCountryFromMarketplace() {
+        let manager = AmazonManagerAccount(
+            managerAccountId: "m", managerAccountName: "Agency",
+            linkedAccounts: [AmazonLinkedAccount(
+                profileId: "5", accountId: "a", accountName: "DE Store",
+                marketplaceId: "A1PA6795UKMFR9"
+            )]
+        )
+        let result = AdvertisingAccountAggregator.profiles(
+            profiles: [], managerAccounts: [manager], region: .europe
+        )
+        XCTAssertEqual(result.first?.countryCode, "DE")
+        XCTAssertEqual(CountryFlag.emoji(result.first?.countryCode), "🇩🇪")
+    }
+
     func testSortedByName() {
         let result = AdvertisingAccountAggregator.profiles(
             profiles: [profile("1", name: "Zed"), profile("2", name: "Apple")],
             managerAccounts: [], region: .europe
         )
         XCTAssertEqual(result.map(\.accountName), ["Apple", "Zed"])
+    }
+}
+
+final class MarketplaceTests: XCTestCase {
+    func testKnownMarketplaces() {
+        XCTAssertEqual(Marketplace.countryCode(for: "ATVPDKIKX0DER"), "US")
+        XCTAssertEqual(Marketplace.countryCode(for: "A1PA6795UKMFR9"), "DE")
+        XCTAssertEqual(Marketplace.countryCode(for: "A1VC38T7YXB528"), "JP")
+    }
+
+    func testUnknownMarketplace() {
+        XCTAssertNil(Marketplace.countryCode(for: "NOPE"))
     }
 }
 

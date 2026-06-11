@@ -40,12 +40,13 @@ extension AdvertisingProfile {
     }
 
     /// A profile linked under a manager account from `GET /managerAccounts`.
+    /// The country (and thus flag) is recovered from the `marketplaceId`.
     init(linked: AmazonLinkedAccount, managerName: String, region: AmazonRegion) {
         self.init(
             profileId: linked.profileId,
             region: region,
             accountName: linked.accountName,
-            countryCode: nil,
+            countryCode: Marketplace.countryCode(for: linked.marketplaceId),
             accountType: nil,
             managerAccountName: managerName
         )
