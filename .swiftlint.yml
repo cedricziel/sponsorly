@@ -5,5 +5,8 @@
 # conflicting SwiftLint rule so they don't fight:
 #   • trailing_comma — SwiftFormat adds trailing commas in multiline collections
 #     (cleaner diffs); SwiftLint's default rule forbids them.
+#   • opening_brace — SwiftFormat wraps the brace onto its own line for multiline
+#     conditions (`if`/`for … where`); SwiftLint wants it on the same line.
 disabled_rules:
   - trailing_comma
+  - opening_brace
