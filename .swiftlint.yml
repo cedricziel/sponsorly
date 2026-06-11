@@ -1,0 +1,9 @@
+# SwiftLint configuration.
+#
+# Formatting style is owned by SwiftFormat (run first in the pre-commit hook).
+# Where the two tools would disagree, defer to SwiftFormat and disable the
+# conflicting SwiftLint rule so they don't fight:
+#   • trailing_comma — SwiftFormat adds trailing commas in multiline collections
+#     (cleaner diffs); SwiftLint's default rule forbids them.
+disabled_rules:
+  - trailing_comma
