@@ -22,19 +22,23 @@ Constraints: SwiftUI, iOS 17+, Swift 5.10, `SWIFT_STRICT_CONCURRENCY=complete` (
 **Non-Goals:**
 - Profile selection / `profileId` picker (follow-up change; `tokenProvider` and storage are designed so it slots in later).
 - Any real Campaigns/Reports API calls.
-- Multi-region selection UI (default to a single region; region is a stored constant for now).
+- Multi-account / multi-profile selection (manager accounts, `profileId` picker) and using more than one region at a time. (Single active-region **selection** is now in scope — see D1/D3 — but choosing among multiple advertising profiles is deferred.)
 - A backend token proxy (the only true way to hide `client_secret`; explicitly deferred).
 
 ## Decisions
 
-### D1: ASWebAuthenticationSession, not the package's loopback server
-We drive the browser leg with `ASWebAuthenticationSession` (system framework `AuthenticationServices`) and capture the redirect via its `callbackURLScheme`. **Alternatives considered:** (a) the package's `LocalOAuthServer` loopback flow — rejected: an in-app HTTP server on iOS is fragile, needs a cleartext-`http` ATS exception, and is an App Review smell; (b) a hosted HTTPS universal link — rejected: requires standing up a domain + `apple-app-site-association` for no benefit here. `ASWebAuthenticationSession` is the platform-blessed pattern, gives the shared-cookie consent UX, and needs no server.
+### D1: In-app loopback server + SFSafariViewController (pivoted)
+
+We capture the redirect with a small in-app loopback HTTP server (`LoopbackRedirectServer`, an `actor` over `Network.NWListener` bound to the loopback interface) and present the Amazon page in `SFSafariViewController`.
+
+**This reverses the original plan** (ASWebAuthenticationSession + custom scheme). Why the pivot: on a *fresh* LWA Security Profile, Amazon's portal would not whitelist the `amzn-<bundleID>` custom scheme as a return URL (the Web Settings field requires `https`), but it **does** accept `http://localhost:8765/callback`. `ASWebAuthenticationSession` can only intercept a *custom scheme*, not an `http://localhost` redirect, so it can't be used for the loopback flow — hence `SFSafariViewController`, which follows the redirect to localhost where our server catches it. No ATS exception is needed (the cleartext load happens inside Safari's process, not ours) and binding to the loopback interface avoids the local-network privacy prompt. **Alternative still open:** a hosted HTTPS universal link / backend redirect — deferred; it becomes the right answer when distribution requires a backend (see D4).
 
 ### D2: Authorization Code grant + PKCE (S256)
 We use the Authorization Code grant with PKCE (`code_challenge_method=S256`) and a random `state` for CSRF. **Alternatives:** Implicit grant — rejected: returns the token in the redirect URL (Amazon's https-return-URL requirement exists precisely to protect that), and gives no refresh token. Code grant returns only a short-lived `code`, so a custom-scheme redirect is acceptable.
 
-### D3: Redirect URI = `amzn-com.cedricziel.sponsorly://oauth`
-Amazon's documented native redirect format is `amzn-<bundleID>`. The `code` (not a token) travels back, so non-https is fine for this grant — corroborated by the package's working `http://localhost` redirect for the same grant. The scheme is declared in `CFBundleURLTypes`, passed to `ASWebAuthenticationSession` as `callbackURLScheme: "amzn-com.cedricziel.sponsorly"`, and **must be registered as an Allowed Return URL in the LWA Security Profile** (operational step, outside the codebase). **Alternative:** custom non-`amzn` scheme — works mechanically but diverges from Amazon's documented convention.
+### D3: Redirect URI = `http://localhost:8765/callback` (pivoted)
+
+The redirect is a loopback URL captured by the in-app server (D1), registered as an Allowed Return URL on the Security Profile. We originally chose the `amzn-<bundleID>` custom scheme, but a fresh Security Profile's portal refused to whitelist it; `http://localhost` is accepted for the code grant (only a `code` travels back, never a token). **Region note:** the authorize *host* is region-specific — `www.amazon.com` (NA), `eu.account.amazon.com` (EU), `apac.account.amazon.com` (FE). The `swift-amazon-ads` package hardcodes the NA host in `AmazonRegion.authorizationURL` for all regions, so we override it with `AmazonRegion.lwaAuthorizeURL`. The active region is user-selectable in Settings and persisted (`UserDefaults`); a single Security Profile works across all three regions.
 
 ### D4: `client_secret` ships in the app (accepted)
 The Ads API token exchange requires `client_secret` for both the `authorization_code` and `refresh_token` grants; there is no public-client/PKCE-only path. In a client-only app the secret is therefore present in the bundle and is extractable. We accept this for a single-user app. **Mitigation if it ever matters:** a backend proxy that holds the secret and brokers token exchange — deferred, and the `LWAAuthService` boundary is drawn so the network calls could later move behind such a proxy.
@@ -42,7 +46,7 @@ The Ads API token exchange requires `client_secret` for both the `authorization_
 ### D5: Component shape and concurrency
 - `KeychainTokenStorage`: a `Sendable` `TokenStorageProtocol` conformance over the Keychain Services API (`SecItem*`), storing refresh token, access token, and expiry. Keys per `AmazonRegion` (reuse the package's key constants).
 - `LWAAuthService`: an `actor` owning the token lifecycle — builds the authorize URL, runs the exchange and refresh POSTs against `region.tokenEndpoint` (decoding `AmazonTokenResponse`/`AmazonOAuthError`), and persists via the storage. It vends a `@Sendable () async throws -> String` `tokenProvider` (valid token, refreshing on demand) plus `signIn()`, `signOut()`, and an `isAuthenticated`/auth-state read. Refresh is serialized inside the actor so concurrent callers don't trigger duplicate refreshes.
-- Presentation: `ASWebAuthenticationSession` needs a presentation anchor on the main actor; a thin `@MainActor` presenter (conforming to `ASWebAuthenticationPresentationContextProviding`) bridges to the actor. An `@Observable`/`@MainActor` view model exposes auth state to `SettingsView`.
+- Presentation: a `@MainActor` `LoopbackWebAuthenticator` starts `LoopbackRedirectServer`, presents `SFSafariViewController` from the active window's top view controller, and resolves the callback URL (or `userCancelled` via the Safari delegate). An `@Observable`/`@MainActor` `AuthViewModel` owns the selected region and exposes auth state to `SettingsView`; it builds an `LWAAuthService` per operation for the active region.
 
 ### D6: Credentials via xcconfig → generated Info.plist
 A git-ignored `Secrets.xcconfig` defines `LWA_CLIENT_ID` / `LWA_CLIENT_SECRET`. `project.yml` references it via `configFiles` (Debug + Release) and an `info: properties:` block maps `LWAClientID = $(LWA_CLIENT_ID)` and `LWAClientSecret = $(LWA_CLIENT_SECRET)` into the generated Info.plist (read at runtime via `Bundle.main.object(forInfoDictionaryKey:)`), alongside `CFBundleURLTypes` for the redirect scheme. A committed `Secrets.example.xcconfig` documents the keys. **Alternative:** a generated Swift constants file — rejected: either commits the secret or needs a build-phase generator; xcconfig is the idiomatic, lower-friction path and the `info:` block is needed for `CFBundleURLTypes` anyway. Run `xcodegen generate` after editing `project.yml`.

@@ -2,16 +2,16 @@
 
 ### Requirement: Sign in with Login with Amazon
 
-The app SHALL let the user authenticate with Amazon via the Login with Amazon (LWA) OAuth 2.0 Authorization Code grant with PKCE, presented through `ASWebAuthenticationSession`. The authorization request SHALL include `response_type=code`, the configured `client_id`, the scopes `profile` and `advertising::campaign_management`, the registered redirect URI, a cryptographically random `state`, and a PKCE `code_challenge` with `code_challenge_method=S256`.
+The app SHALL let the user authenticate with Amazon via the Login with Amazon (LWA) OAuth 2.0 Authorization Code grant with PKCE. The Amazon authorize page is presented in `SFSafariViewController` and the redirect is captured by an in-app loopback HTTP server bound to `127.0.0.1`. The authorization request SHALL target the region-specific authorize host and include `response_type=code`, the configured `client_id`, the scopes `profile` and `advertising::campaign_management`, the `http://localhost:<port>/callback` redirect URI, a cryptographically random `state`, and a PKCE `code_challenge` with `code_challenge_method=S256`.
 
 #### Scenario: User completes consent
 
-- **WHEN** the user taps "Sign in with Amazon" and approves access in the presented Amazon sign-in sheet
-- **THEN** the app receives the redirect to `amzn-com.cedricziel.sponsorly://oauth`, exchanges the returned authorization code (with the matching PKCE `code_verifier`) at the region token endpoint for an access token and refresh token, persists them, and transitions to a signed-in state
+- **WHEN** the user taps "Sign in with Amazon" and approves access on the presented Amazon page
+- **THEN** Amazon redirects to `http://localhost:<port>/callback`, the in-app loopback server captures the authorization code, and the app exchanges it (with the matching PKCE `code_verifier`) at the region token endpoint for an access token and refresh token, persists them, and transitions to a signed-in state
 
 #### Scenario: User cancels the sheet
 
-- **WHEN** the user dismisses the `ASWebAuthenticationSession` sheet without completing sign-in
+- **WHEN** the user dismisses the `SFSafariViewController` without completing sign-in
 - **THEN** the app remains in the signed-out state and surfaces no error other than an optional non-blocking notice, leaving no partial credentials stored
 
 #### Scenario: Returned state does not match
@@ -70,6 +70,25 @@ The Settings screen SHALL reflect the current authentication state, showing a "S
 
 - **WHEN** valid credentials are stored
 - **THEN** the Amazon Ads Account section indicates the connected state and offers a "Sign out" action
+
+### Requirement: Select the Amazon advertising region
+
+The app SHALL let the user choose the Amazon region (North America, Europe, or Far East) before signing in, and SHALL persist the selection across launches. The chosen region SHALL determine the authorize host, the token endpoint, and the per-region token storage. The selection SHALL be fixed while signed in (changeable after signing out).
+
+#### Scenario: Region selectable when signed out
+
+- **WHEN** the user is signed out
+- **THEN** the Amazon Ads Account section offers a region picker (North America / Europe / Far East), and the chosen region is used for the next sign-in's authorize host and token endpoint
+
+#### Scenario: Selection persists and scopes restored state
+
+- **WHEN** the user has selected a region and relaunches the app
+- **THEN** the previously selected region is restored, and signed-in state is evaluated against the credentials stored for that region
+
+#### Scenario: Region shown when signed in
+
+- **WHEN** the user is signed in
+- **THEN** the Amazon Ads Account section displays the connected region
 
 ### Requirement: Credentials supplied via build configuration
 
