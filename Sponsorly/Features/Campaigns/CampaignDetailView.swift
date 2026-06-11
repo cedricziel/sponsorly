@@ -5,11 +5,28 @@ struct CampaignDetailView: View {
 
     @Environment(AccountsViewModel.self) private var accounts
     @State private var model = AdGroupsViewModel()
+    @State private var isHarvesting = false
+
+    private var isAuto: Bool {
+        campaign.targetingType?.uppercased() == "AUTO"
+    }
 
     var body: some View {
         content
             .navigationTitle(campaign.name)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if isAuto {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { isHarvesting = true } label: {
+                            Label("Harvest", systemImage: "leaf")
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $isHarvesting) {
+                HarvestWizardView(campaign: campaign, accounts: accounts)
+            }
             .task { await model.load(campaignId: campaign.campaignId, using: accounts) }
             .refreshable { await model.load(campaignId: campaign.campaignId, using: accounts) }
     }
