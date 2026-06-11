@@ -39,6 +39,18 @@ final class HarvestScorerTests: XCTestCase {
         XCTAssertEqual(HarvestScorer.graduate(terms, loose).map(\.term), ["edge"])
     }
 
+    func testDecodesNumericIds() throws {
+        // The reporting API returns campaign/ad-group ids as numbers, not strings.
+        let json = Data("""
+        [{"searchTerm":"b00x","campaignId":60720048974149,"adGroupId":232987426622069,\
+        "clicks":4,"cost":2.61,"sales30d":0,"purchases30d":0}]
+        """.utf8)
+        let rows = try JSONDecoder().decode([SearchTermReportRow].self, from: json)
+        XCTAssertEqual(rows.first?.campaignId, "60720048974149")
+        XCTAssertEqual(rows.first?.adGroupId, "232987426622069")
+        XCTAssertEqual(rows.first?.cost, 2.61)
+    }
+
     func testSearchTermsDropIncompleteRows() {
         let rows = [
             SearchTermReportRow(

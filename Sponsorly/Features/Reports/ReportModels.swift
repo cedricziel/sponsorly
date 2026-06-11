@@ -70,6 +70,16 @@ struct ReportRequest: Encodable {
     }
 }
 
+extension KeyedDecodingContainer {
+    /// Decodes an id that the reporting API returns as a number (campaign/ad group
+    /// ids) but other APIs return as a string — normalize to `String`.
+    func flexibleString(forKey key: Key) -> String? {
+        if let value = try? decodeIfPresent(String.self, forKey: key) { return value }
+        if let value = try? decodeIfPresent(Int64.self, forKey: key) { return String(value) }
+        return nil
+    }
+}
+
 /// A decoded row from a Sponsored Products search-term report.
 struct SearchTermReportRow: Decodable, Hashable {
     let searchTerm: String?
@@ -84,6 +94,34 @@ struct SearchTermReportRow: Decodable, Hashable {
         "searchTerm", "campaignId", "adGroupId", "clicks",
         "cost", "sales30d", "purchases30d",
     ]
+
+    init(
+        searchTerm: String?, campaignId: String?, adGroupId: String?,
+        clicks: Int?, cost: Double?, sales30d: Double?, purchases30d: Int?
+    ) {
+        self.searchTerm = searchTerm
+        self.campaignId = campaignId
+        self.adGroupId = adGroupId
+        self.clicks = clicks
+        self.cost = cost
+        self.sales30d = sales30d
+        self.purchases30d = purchases30d
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case searchTerm, campaignId, adGroupId, clicks, cost, sales30d, purchases30d
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        searchTerm = try container.decodeIfPresent(String.self, forKey: .searchTerm)
+        campaignId = container.flexibleString(forKey: .campaignId)
+        adGroupId = container.flexibleString(forKey: .adGroupId)
+        clicks = try container.decodeIfPresent(Int.self, forKey: .clicks)
+        cost = try container.decodeIfPresent(Double.self, forKey: .cost)
+        sales30d = try container.decodeIfPresent(Double.self, forKey: .sales30d)
+        purchases30d = try container.decodeIfPresent(Int.self, forKey: .purchases30d)
+    }
 }
 
 /// `createAsyncReport` response.
@@ -111,6 +149,36 @@ struct CampaignReportRow: Codable, Hashable {
     let cost: Double?
     let sales30d: Double?
     let purchases30d: Int?
+
+    init(
+        campaignId: String?, campaignName: String?, date: String?, impressions: Int?,
+        clicks: Int?, cost: Double?, sales30d: Double?, purchases30d: Int?
+    ) {
+        self.campaignId = campaignId
+        self.campaignName = campaignName
+        self.date = date
+        self.impressions = impressions
+        self.clicks = clicks
+        self.cost = cost
+        self.sales30d = sales30d
+        self.purchases30d = purchases30d
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case campaignId, campaignName, date, impressions, clicks, cost, sales30d, purchases30d
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        campaignId = container.flexibleString(forKey: .campaignId)
+        campaignName = try container.decodeIfPresent(String.self, forKey: .campaignName)
+        date = try container.decodeIfPresent(String.self, forKey: .date)
+        impressions = try container.decodeIfPresent(Int.self, forKey: .impressions)
+        clicks = try container.decodeIfPresent(Int.self, forKey: .clicks)
+        cost = try container.decodeIfPresent(Double.self, forKey: .cost)
+        sales30d = try container.decodeIfPresent(Double.self, forKey: .sales30d)
+        purchases30d = try container.decodeIfPresent(Int.self, forKey: .purchases30d)
+    }
 }
 
 extension CampaignReportRow {
