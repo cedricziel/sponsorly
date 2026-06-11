@@ -2,25 +2,25 @@ import Foundation
 
 enum CampaignsError: LocalizedError {
     case invalidResponse
-    case http(status: Int)
+    case http(status: Int, body: String?)
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            return "Received an unexpected response from Amazon."
-        case let .http(status):
-            return "Amazon returned HTTP \(status)."
+            "Received an unexpected response from Amazon."
+        case let .http(status, _):
+            "Amazon returned HTTP \(status)."
         }
     }
 }
 
 /// A page-collected result that flags whether the page cap truncated the list.
-struct CampaignList: Sendable {
+struct CampaignList {
     let campaigns: [Campaign]
     let truncated: Bool
 }
 
-struct AdGroupList: Sendable {
+struct AdGroupList {
     let adGroups: [AdGroup]
     let truncated: Bool
 }
@@ -62,7 +62,7 @@ actor CampaignsRepository {
             baseBody: [
                 "maxResults": Self.pageSize,
                 "stateFilter": ["include": ["ENABLED", "PAUSED"]],
-                "campaignIdFilter": ["include": [campaignId]]
+                "campaignIdFilter": ["include": [campaignId]],
             ]
         ) { data in
             let response = try JSONDecoder().decode(AdGroupListResponse.self, from: data)
@@ -116,7 +116,7 @@ actor CampaignsRepository {
         let (data, response) = try await urlSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw CampaignsError.invalidResponse }
         guard (200 ..< 300).contains(http.statusCode) else {
-            throw CampaignsError.http(status: http.statusCode)
+            throw CampaignsError.http(status: http.statusCode, body: httpResponseBody(data))
         }
         return data
     }

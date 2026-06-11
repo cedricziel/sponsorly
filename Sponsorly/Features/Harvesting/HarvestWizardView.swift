@@ -14,12 +14,8 @@ struct HarvestWizardView: View {
                 if model.isLoading, model.allTerms.isEmpty {
                     ProgressView("Loading search terms…")
                 } else if let error = model.errorMessage, model.allTerms.isEmpty {
-                    ContentUnavailableView {
-                        Label("Couldn't Load", systemImage: "exclamationmark.triangle")
-                    } description: {
-                        Text(error)
-                    } actions: {
-                        Button("Retry") { Task { await model.loadReport() } }
+                    APIErrorView(message: error, responseBody: model.errorResponseBody) {
+                        Task { await model.loadReport() }
                     }
                 } else {
                     switch model.step {
@@ -225,4 +221,16 @@ extension HarvestViewModel {
     var targetNotReady: Bool {
         !selectedGraduate.isEmpty && (targetCampaignId == nil || targetAdGroupId == nil)
     }
+}
+
+#Preview("Criteria") {
+    NavigationStack { HarvestCriteriaStep(model: .preview(step: .criteria)) }
+}
+
+#Preview("Review") {
+    NavigationStack { HarvestReviewStep(model: .preview(step: .review)) }
+}
+
+#Preview("Results") {
+    NavigationStack { HarvestResultsStep(model: .preview(step: .results)) }
 }

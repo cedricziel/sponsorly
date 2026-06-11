@@ -1,7 +1,7 @@
 import Foundation
 
 enum ReportError: LocalizedError {
-    case http(status: Int)
+    case http(status: Int, body: String?)
     case invalidResponse
     case generationFailed(String)
     case timedOut
@@ -10,7 +10,7 @@ enum ReportError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case let .http(status): "Amazon returned HTTP \(status)."
+        case let .http(status, _): "Amazon returned HTTP \(status)."
         case .invalidResponse: "Received an unexpected response from Amazon."
         case let .generationFailed(reason): "Report generation failed: \(reason)"
         case .timedOut: "The report took too long to generate."
@@ -79,7 +79,7 @@ actor ReportingRepository {
         let (data, response) = try await urlSession.data(from: url)
         guard let http = response as? HTTPURLResponse else { throw ReportError.invalidResponse }
         guard (200 ..< 300).contains(http.statusCode) else {
-            throw ReportError.http(status: http.statusCode)
+            throw ReportError.http(status: http.statusCode, body: httpResponseBody(data))
         }
         guard let json = ReportGunzip.decompress(data) else { throw ReportError.decompressionFailed }
         return try JSONDecoder().decode([Row].self, from: json)
@@ -109,7 +109,7 @@ actor ReportingRepository {
         let (data, response) = try await urlSession.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw ReportError.invalidResponse }
         guard (200 ..< 300).contains(http.statusCode) else {
-            throw ReportError.http(status: http.statusCode)
+            throw ReportError.http(status: http.statusCode, body: httpResponseBody(data))
         }
         return data
     }

@@ -28,6 +28,7 @@ final class HarvestViewModel {
     private(set) var allTerms: [SearchTerm] = []
     private(set) var isLoading = false
     var errorMessage: String?
+    var errorResponseBody: String?
 
     // Target (manual exact) selection.
     private(set) var manualCampaigns: [Campaign] = []
@@ -94,6 +95,7 @@ final class HarvestViewModel {
             selectedNegate = Set(negateTerms.map(\.id))
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            errorResponseBody = apiResponseBody(from: error)
         }
     }
 
@@ -133,11 +135,14 @@ final class HarvestViewModel {
                terms: graduating.map(\.term), bid: bid
            )
         {
-            outcomes += statuses.map { WriteOutcome(term: $0.key, kind: .keyword, status: $0.value) }
+            outcomes += Self.outcomes(statuses, kind: .keyword)
         }
 
         // 2. Negate every selected term in its source ad group (graduated + negate-only).
-        let negating = graduating + negateTerms.filter { selectedNegate.contains($0.id) }
+        let negating = Self.negateTargets(
+            graduating: graduating,
+            negateSelected: negateTerms.filter { selectedNegate.contains($0.id) }
+        )
         for (adGroupId, terms) in Dictionary(grouping: negating, by: { $0.adGroupId ?? "" })
             where !adGroupId.isEmpty
         {
@@ -145,11 +150,57 @@ final class HarvestViewModel {
             if let statuses = try? await repository.createNegativeExact(
                 campaignId: campaignId, adGroupId: adGroupId, terms: terms.map(\.term)
             ) {
-                outcomes += statuses.map { WriteOutcome(term: $0.key, kind: .negative, status: $0.value) }
+                outcomes += Self.outcomes(statuses, kind: .negative)
             }
         }
 
         results = outcomes
         step = .results
     }
+
+    // MARK: - Pure helpers (testable)
+
+    /// Every graduated term is *also* negated in its source — that's the point of
+    /// harvesting (stop the auto and manual double-bidding on the same query).
+    nonisolated static func negateTargets(
+        graduating: [SearchTerm], negateSelected: [SearchTerm]
+    ) -> [SearchTerm] {
+        graduating + negateSelected
+    }
+
+    nonisolated static func outcomes(
+        _ statuses: [String: WriteStatus], kind: WriteOutcome.Kind
+    ) -> [WriteOutcome] {
+        statuses
+            .map { WriteOutcome(term: $0.key, kind: kind, status: $0.value) }
+            .sorted { $0.term < $1.term }
+    }
 }
+
+#if DEBUG
+    extension HarvestViewModel {
+        static func preview(step: Step = .review) -> HarvestViewModel {
+            let campaign = Campaign(
+                campaignId: "1", name: "SP | Demo | Auto", state: "ENABLED",
+                targetingType: "AUTO", budget: nil
+            )
+            let model = HarvestViewModel(campaign: campaign, accounts: .previewModel())
+            model.allTerms = [
+                SearchTerm(term: "running shoes", campaignId: "1", adGroupId: "ag",
+                           clicks: 20, spend: 10, sales: 50, orders: 3),
+                SearchTerm(term: "trail runners", campaignId: "1", adGroupId: "ag",
+                           clicks: 15, spend: 8, sales: 36, orders: 2),
+                SearchTerm(term: "free shoes", campaignId: "1", adGroupId: "ag",
+                           clicks: 14, spend: 9, sales: 0, orders: 0),
+            ]
+            model.selectedGraduate = Set(model.graduateTerms.map(\.id))
+            model.selectedNegate = Set(model.negateTerms.map(\.id))
+            model.results = [
+                WriteOutcome(term: "running shoes", kind: .keyword, status: .succeeded),
+                WriteOutcome(term: "free shoes", kind: .negative, status: .succeeded),
+            ]
+            model.step = step
+            return model
+        }
+    }
+#endif

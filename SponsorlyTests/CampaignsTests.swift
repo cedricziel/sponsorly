@@ -93,7 +93,7 @@ final class CampaignsRepositoryTests: XCTestCase {
         do {
             _ = try await makeRepository().listCampaigns()
             XCTFail("Expected error")
-        } catch let CampaignsError.http(status) {
+        } catch let CampaignsError.http(status, _) {
             XCTAssertEqual(status, 500)
         } catch {
             XCTFail("Unexpected error: \(error)")

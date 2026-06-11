@@ -23,7 +23,7 @@
 - [x] 4.1 Add `@MainActor @Observable HarvestViewModel`: load report, hold criteria + selection + target
 - [x] 4.2 Re-bucket in memory when criteria change; track per-term checked state and the chosen target campaign/ad group
 - [x] 4.3 Build the confirmation summary; perform writes; collect per-term results
-- [ ] 4.4 Unit tests for the summary + result aggregation (with the repository mocked)
+- [x] 4.4 Unit tests for the summary + result aggregation (with the repository mocked)
 
 ## 5. Wizard UI
 
@@ -32,7 +32,7 @@
 - [x] 5.3 Step 3 — Confirm: summary of what will be created/negated; disabled when nothing selected; explicit confirm
 - [x] 5.4 Results screen: per-term outcomes (added / already-added / negated / failed) + counts
 - [x] 5.5 Entry point from a campaign's detail (offered for auto campaigns); loading / empty / error states
-- [ ] 5.6 `#Preview`s for the criteria, review, and results steps
+- [x] 5.6 `#Preview`s for the criteria, review, and results steps
 
 ## 6. Wire-up & verification
 

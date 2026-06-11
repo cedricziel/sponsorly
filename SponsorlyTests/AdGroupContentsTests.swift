@@ -82,7 +82,7 @@ final class AdGroupContentsRepositoryTests: XCTestCase {
         do {
             _ = try await makeRepository().listKeywords(adGroupId: "9")
             XCTFail("Expected error")
-        } catch let CampaignsError.http(status) {
+        } catch let CampaignsError.http(status, _) {
             XCTAssertEqual(status, 500)
         } catch {
             XCTFail("Unexpected error: \(error)")

@@ -3,14 +3,13 @@ import Foundation
 
 enum AccountsError: LocalizedError {
     case invalidResponse
-    case http(status: Int)
+    case http(status: Int, body: String?)
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            return "Received an unexpected response from Amazon."
-        case let .http(status):
-            return "Amazon returned HTTP \(status)."
+            "Received an unexpected response from Amazon."
+        case let .http(status, _): "Amazon returned HTTP \(status)."
         }
     }
 }
@@ -71,13 +70,14 @@ actor AccountsRepository {
         async let profiles = getProfiles(region: region, token: token)
         async let managers = getManagerAccounts(region: region, token: token)
         return try await AdvertisingAccountAggregator.profiles(
-            profiles: profiles, managerAccounts: managers, region: region)
+            profiles: profiles, managerAccounts: managers, region: region
+        )
     }
 
     private func getProfiles(region: AmazonRegion, token: String) async throws -> [AmazonProfile] {
         let url = region.advertisingAPIBaseURL.appendingPathComponent("v2/profiles")
         let (data, response) = try await get(url, token: token)
-        try Self.ensureSuccess(response)
+        try Self.ensureSuccess(response, data: data)
         return try JSONDecoder().decode([AmazonProfile].self, from: data)
     }
 
@@ -90,7 +90,7 @@ actor AccountsRepository {
         if let http = response as? HTTPURLResponse, http.statusCode == 404 {
             return []
         }
-        try Self.ensureSuccess(response)
+        try Self.ensureSuccess(response, data: data)
         guard !data.isEmpty else { return [] }
         return try JSONDecoder().decode(AmazonManagerAccountsResponse.self, from: data).managerAccounts
     }
@@ -104,10 +104,10 @@ actor AccountsRepository {
         return try await urlSession.data(for: request)
     }
 
-    private static func ensureSuccess(_ response: URLResponse) throws {
+    private static func ensureSuccess(_ response: URLResponse, data: Data) throws {
         guard let http = response as? HTTPURLResponse else { throw AccountsError.invalidResponse }
         guard (200 ..< 300).contains(http.statusCode) else {
-            throw AccountsError.http(status: http.statusCode)
+            throw AccountsError.http(status: http.statusCode, body: httpResponseBody(data))
         }
     }
 }
