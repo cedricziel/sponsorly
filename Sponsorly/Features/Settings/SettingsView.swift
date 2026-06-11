@@ -2,11 +2,7 @@ import AmazonAdsCore
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var auth: AuthViewModel
-
-    init(auth: AuthViewModel = AuthViewModel()) {
-        _auth = State(initialValue: auth)
-    }
+    @Environment(AuthViewModel.self) private var auth
 
     var body: some View {
         NavigationStack {
@@ -24,7 +20,7 @@ struct SettingsView: View {
 
                 Section("Advertising") {
                     NavigationLink {
-                        AccountsView(auth: auth)
+                        AccountsView()
                     } label: {
                         Text("Accounts")
                     }
@@ -36,7 +32,6 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .task { await auth.restore() }
             .alert(
                 "Sign-in failed",
                 isPresented: Binding(
@@ -88,9 +83,15 @@ private extension Bundle {
 }
 
 #Preview("No regions") {
-    SettingsView(auth: .previewModel(connected: []))
+    let auth = AuthViewModel.previewModel(connected: [])
+    return SettingsView()
+        .environment(auth)
+        .environment(AccountsViewModel.previewModel(auth: auth))
 }
 
 #Preview("EU connected") {
-    SettingsView(auth: .previewModel(connected: [.europe]))
+    let auth = AuthViewModel.previewModel(connected: [.europe])
+    return SettingsView()
+        .environment(auth)
+        .environment(AccountsViewModel.previewModel(auth: auth))
 }

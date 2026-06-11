@@ -2,11 +2,7 @@ import AmazonAdsCore
 import SwiftUI
 
 struct AccountsView: View {
-    @State private var model: AccountsViewModel
-
-    init(auth: AuthViewModel) {
-        _model = State(initialValue: AccountsViewModel(auth: auth))
-    }
+    @Environment(AccountsViewModel.self) private var model
 
     var body: some View {
         List {
@@ -88,6 +84,7 @@ struct AccountsView: View {
 
 #Preview("No regions") {
     NavigationStack {
-        AccountsView(auth: .previewModel(connected: []))
+        AccountsView()
     }
+    .environment(AccountsViewModel.previewModel())
 }
