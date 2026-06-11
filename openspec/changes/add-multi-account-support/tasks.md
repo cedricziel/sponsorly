@@ -46,6 +46,6 @@
 - [x] 7.2 Build for the simulator
 - [x] 7.3 Run tests
 - [x] 7.4 Run `swiftformat` + `swiftlint` (lint clean)
-- [ ] 7.5 On device: connect ≥1 region, load Accounts, confirm real profiles/manager accounts appear, select an active profile, relaunch and confirm it restores
-- [ ] 7.6 Confirm a scoped `AuthenticatedTransport` for the active profile carries the correct `Amazon-Advertising-API-Scope` header (log/inspect one request)
-- [ ] 7.7 Commit as semantic commits (auth refactor, accounts repository/model, UI), one logical change per commit
+- [x] 7.5 On device: connect ≥1 region, load Accounts, confirm real profiles/manager accounts appear, select an active profile, relaunch and confirm it restores
+- [x] 7.6 Confirm a scoped `AuthenticatedTransport` for the active profile carries the correct `Amazon-Advertising-API-Scope` header (log/inspect one request)
+- [x] 7.7 Commit as semantic commits (auth refactor, accounts repository/model, UI), one logical change per commit
