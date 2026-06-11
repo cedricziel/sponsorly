@@ -46,12 +46,13 @@ struct ReportRequest: Encodable {
         )
     }
 
-    /// A search-term report scoped to one campaign.
+    /// A profile-wide Sponsored Products search-term report. `campaignId` is not
+    /// a valid filter for `groupBy: searchTerm`, so callers filter rows to the
+    /// campaign they care about client-side (rows carry `campaignId`).
     static func spSearchTerm(
         name: String,
         startDate: String,
-        endDate: String,
-        campaignId: String
+        endDate: String
     ) -> ReportRequest {
         ReportRequest(
             name: name,
@@ -63,8 +64,7 @@ struct ReportRequest: Encodable {
                 columns: SearchTermReportRow.columns,
                 reportTypeId: "spSearchTerm",
                 timeUnit: "SUMMARY",
-                format: "GZIP_JSON",
-                filters: [Filter(field: "campaignId", values: [campaignId])]
+                format: "GZIP_JSON"
             )
         )
     }

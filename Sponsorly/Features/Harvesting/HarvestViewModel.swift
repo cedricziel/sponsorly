@@ -84,13 +84,13 @@ final class HarvestViewModel {
             return
         }
         let (start, end) = SpendOverviewViewModel.reportRange()
-        let request = ReportRequest.spSearchTerm(
-            name: "harvest", startDate: start, endDate: end, campaignId: sourceCampaign.campaignId
-        )
+        let request = ReportRequest.spSearchTerm(name: "harvest", startDate: start, endDate: end)
         do {
             let rows: [SearchTermReportRow] = try await ReportingRepository(scopedClient: scoped)
                 .fetchRows(request)
-            allTerms = HarvestScorer.searchTerms(from: rows)
+            // The report spans the whole profile; keep only this campaign's terms.
+            let campaignRows = rows.filter { $0.campaignId == sourceCampaign.campaignId }
+            allTerms = HarvestScorer.searchTerms(from: campaignRows)
             selectedGraduate = Set(graduateTerms.map(\.id))
             selectedNegate = Set(negateTerms.map(\.id))
         } catch {
