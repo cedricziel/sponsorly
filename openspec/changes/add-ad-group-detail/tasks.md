@@ -32,5 +32,5 @@
 - [x] 5.2 Build for the simulator
 - [x] 5.3 Run tests
 - [x] 5.4 Run `swiftformat` + `swiftlint` (lint clean)
-- [ ] 5.5 On device: open a campaign → an ad group, confirm real product ads + keywords/targets load
-- [ ] 5.6 Commit as semantic commits (models, repository, view model, detail UI), one logical change per commit
+- [x] 5.5 On device: open a campaign → an ad group, confirm real product ads + keywords/targets load
+- [x] 5.6 Commit as semantic commits (models, repository, view model, detail UI), one logical change per commit
