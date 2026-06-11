@@ -43,4 +43,4 @@
 - [x] 6.3 Run tests
 - [x] 6.4 Run `swiftformat` + `swiftlint` (lint clean)
 - [ ] 6.5 On device: select a profile, confirm today tile is live, the report headline/trend/top-campaigns populate (confirms the async + gzip pipeline against the real API)
-- [ ] 6.6 Commit as semantic commits (pipeline, cache, budget usage, view model, UI), one logical change per commit
+- [x] 6.6 Commit as semantic commits (pipeline, cache, budget usage, view model, UI), one logical change per commit
