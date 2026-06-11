@@ -1,0 +1,9 @@
+# Xcode-managed JSON — rewritten by Xcode, do not let prettier churn it.
+**/*.xcassets/**
+Sponsorly.xcodeproj/
+Sponsorly/Info.plist
+
+# Build output
+build/
+DerivedData/
+.build/

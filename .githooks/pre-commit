@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#
+# Pre-commit hook: format staged files, then lint Swift.
+#   • Swift files      -> swiftformat (format)
+#   • json/md/yml/yaml -> prettier via npx (format)
+#   • Swift files      -> swiftlint   (lint; blocks the commit on violations)
+#
+# Tracked in .githooks/ and shared via:  git config core.hooksPath .githooks
+# (run `make`-free: tools are invoked directly here).
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+swift_files=()
+prettier_files=()
+while IFS= read -r f; do
+  [ -f "$f" ] || continue   # skip deletions / vanished paths
+  case "$f" in
+    *.swift)                 swift_files+=("$f") ;;
+    *.json|*.md|*.yml|*.yaml) prettier_files+=("$f") ;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+restage=()
+
+# --- Format Swift ---------------------------------------------------------
+if [ "${#swift_files[@]}" -gt 0 ]; then
+  if command -v swiftformat >/dev/null 2>&1; then
+    echo "→ swiftformat (${#swift_files[@]} file(s))"
+    swiftformat "${swift_files[@]}"
+    restage+=("${swift_files[@]}")
+  else
+    echo "⚠  swiftformat not found — skipping Swift formatting" >&2
+  fi
+fi
+
+# --- Format everything else with prettier ---------------------------------
+if [ "${#prettier_files[@]}" -gt 0 ]; then
+  if command -v npx >/dev/null 2>&1; then
+    echo "→ prettier (${#prettier_files[@]} file(s))"
+    npx --yes prettier --write --ignore-unknown "${prettier_files[@]}"
+    restage+=("${prettier_files[@]}")
+  else
+    echo "⚠  npx not found — skipping prettier formatting" >&2
+  fi
+fi
+
+# Re-stage whatever the formatters may have rewritten.
+if [ "${#restage[@]}" -gt 0 ]; then
+  git add -- "${restage[@]}"
+fi
+
+# --- Lint Swift (blocks commit on error-severity violations) --------------
+if [ "${#swift_files[@]}" -gt 0 ]; then
+  if command -v swiftlint >/dev/null 2>&1; then
+    echo "→ swiftlint"
+    swiftlint lint --quiet "${swift_files[@]}"
+  else
+    echo "⚠  swiftlint not found — skipping lint" >&2
+  fi
+fi
