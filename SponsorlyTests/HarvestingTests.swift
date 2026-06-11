@@ -51,6 +51,17 @@ final class HarvestScorerTests: XCTestCase {
         XCTAssertEqual(rows.first?.cost, 2.61)
     }
 
+    func testDetectsASINTerms() {
+        func make(_ text: String) -> SearchTerm {
+            SearchTerm(term: text, campaignId: "c", adGroupId: "a", clicks: 1, spend: 1, sales: 0, orders: 0)
+        }
+        XCTAssertTrue(make("b07ndcwkjw").isASIN)
+        XCTAssertTrue(make("B00JVFUNBG").isASIN)
+        XCTAssertFalse(make("running shoes").isASIN)
+        XCTAssertFalse(make("b07ndc").isASIN) // too short
+        XCTAssertFalse(make("a07ndcwkjw").isASIN) // wrong prefix
+    }
+
     func testSearchTermsDropIncompleteRows() {
         let rows = [
             SearchTermReportRow(
@@ -136,5 +147,29 @@ final class KeywordWriteRepositoryTests: XCTestCase {
             campaignId: "c", adGroupId: "a", terms: ["term"]
         )
         XCTAssertEqual(statuses["term"], .succeeded)
+    }
+
+    func testProductTargetParsesTargetingClauses() async throws {
+        let body = #"{"targetingClauses":{"success":[{"index":0,"targetId":"123"}]}}"#
+        MockURLProtocol.handler = { request in
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(body.utf8))
+        }
+        let statuses = try await makeRepository().createProductTargets(
+            campaignId: "c", adGroupId: "a", asins: ["b07ndcwkjw"], bid: 0.5
+        )
+        XCTAssertEqual(statuses["b07ndcwkjw"], .succeeded)
+    }
+
+    func testNegativeProductTargetParsesNegativeClauses() async throws {
+        let body = #"{"negativeTargetingClauses":{"success":[{"index":0}]}}"#
+        MockURLProtocol.handler = { request in
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (response, Data(body.utf8))
+        }
+        let statuses = try await makeRepository().createNegativeProductTargets(
+            campaignId: "c", adGroupId: "a", asins: ["b07ndcwkjw"]
+        )
+        XCTAssertEqual(statuses["b07ndcwkjw"], .succeeded)
     }
 }

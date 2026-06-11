@@ -7,10 +7,13 @@ enum WriteStatus: Hashable {
     case failed(String)
 }
 
-/// SP v3 batch write response (`{ keywords|negativeKeywords: { success:[], error:[] } }`).
+/// SP v3 batch write response. The top-level key mirrors the resource written:
+/// `keywords` / `negativeKeywords` / `targetingClauses` / `negativeTargetingClauses`.
 private struct BatchWriteResponse: Decodable {
     let keywords: BatchResult?
     let negativeKeywords: BatchResult?
+    let targetingClauses: BatchResult?
+    let negativeTargetingClauses: BatchResult?
 }
 
 private struct BatchResult: Decodable {
@@ -35,6 +38,8 @@ actor KeywordWriteRepository {
 
     private static let keywordContentType = "application/vnd.spKeyword.v3+json"
     private static let negativeContentType = "application/vnd.spNegativeKeyword.v3+json"
+    private static let targetContentType = "application/vnd.spTargetingClause.v3+json"
+    private static let negativeTargetContentType = "application/vnd.spNegativeTargetingClause.v3+json"
 
     init(scopedClient: ScopedClient, urlSession: URLSession = .shared) {
         self.scopedClient = scopedClient
@@ -76,6 +81,45 @@ actor KeywordWriteRepository {
         )
         let response = try JSONDecoder().decode(BatchWriteResponse.self, from: data)
         return outcomes(terms: terms, result: response.negativeKeywords)
+    }
+
+    /// Graduates `asins` as exact product targets (`ASIN_SAME_AS`) in the target ad group.
+    func createProductTargets(
+        campaignId: String, adGroupId: String, asins: [String], bid: Double
+    ) async throws -> [String: WriteStatus] {
+        guard !asins.isEmpty else { return [:] }
+        let clauses: [[String: Any]] = asins.map {
+            [
+                "campaignId": campaignId, "adGroupId": adGroupId, "state": "ENABLED",
+                "bid": bid, "expressionType": "MANUAL",
+                "expression": [["type": "ASIN_SAME_AS", "value": $0.uppercased()]],
+            ]
+        }
+        let data = try await post(
+            path: "sp/targets", contentType: Self.targetContentType,
+            body: ["targetingClauses": clauses]
+        )
+        let response = try JSONDecoder().decode(BatchWriteResponse.self, from: data)
+        return outcomes(terms: asins, result: response.targetingClauses)
+    }
+
+    /// Negates `asins` as negative product targets in the (auto) campaign's ad group.
+    func createNegativeProductTargets(
+        campaignId: String, adGroupId: String, asins: [String]
+    ) async throws -> [String: WriteStatus] {
+        guard !asins.isEmpty else { return [:] }
+        let clauses: [[String: Any]] = asins.map {
+            [
+                "campaignId": campaignId, "adGroupId": adGroupId, "state": "ENABLED",
+                "expression": [["type": "ASIN_SAME_AS", "value": $0.uppercased()]],
+            ]
+        }
+        let data = try await post(
+            path: "sp/negativeTargets", contentType: Self.negativeTargetContentType,
+            body: ["negativeTargetingClauses": clauses]
+        )
+        let response = try JSONDecoder().decode(BatchWriteResponse.self, from: data)
+        return outcomes(terms: asins, result: response.negativeTargetingClauses)
     }
 
     private func outcomes(terms: [String], result: BatchResult?) -> [String: WriteStatus] {

@@ -130,7 +130,10 @@ private struct HarvestReviewStep: View {
                         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(term.term).lineLimit(1)
+                            HStack(spacing: 6) {
+                                Text(term.term).lineLimit(1)
+                                TermKindBadge(isASIN: term.isASIN)
+                            }
                             Text("\(term.clicks) clk · \(term.orders) ord · ACOS \(Money.percent(term.acos))")
                                 .font(.caption).foregroundStyle(.secondary)
                         }
@@ -214,6 +217,23 @@ private struct HarvestResultsStep: View {
         case .alreadyExists: .secondary
         case .failed: .red
         }
+    }
+}
+
+/// Tags a review row as an ASIN (→ product target) or a text query (→ keyword).
+private struct TermKindBadge: View {
+    let isASIN: Bool
+
+    var body: some View {
+        Text(isASIN ? "ASIN" : "kw")
+            .font(.caption2.weight(.medium))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(
+                (isASIN ? Color.orange : Color.secondary).opacity(0.18),
+                in: Capsule()
+            )
+            .foregroundStyle(isASIN ? Color.orange : Color.secondary)
     }
 }
 

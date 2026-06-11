@@ -25,6 +25,12 @@ struct SearchTerm: Identifiable, Hashable {
     var acos: Double? {
         sales > 0 ? spend / sales : nil
     }
+
+    /// Auto-target search terms are frequently product ASINs (e.g. "b07ndcwkjw"),
+    /// not typed queries. ASINs graduate/negate as product *targets*, not keywords.
+    var isASIN: Bool {
+        term.range(of: #"^[bB]0[a-zA-Z0-9]{8}$"#, options: .regularExpression) != nil
+    }
 }
 
 enum HarvestScorer {

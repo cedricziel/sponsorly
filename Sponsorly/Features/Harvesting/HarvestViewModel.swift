@@ -141,37 +141,75 @@ final class HarvestViewModel {
         defer { isWriting = false }
         let repository = KeywordWriteRepository(scopedClient: scoped)
 
-        var outcomes: [WriteOutcome] = []
-
-        // 1. Graduate the checked winners → exact keywords in the target ad group.
         let graduating = graduateTerms.filter { selectedGraduate.contains($0.id) }
-        if !graduating.isEmpty,
-           let statuses = try? await repository.createExactKeywords(
-               campaignId: targetCampaignId, adGroupId: targetAdGroupId,
-               terms: graduating.map(\.term), bid: bid
-           )
-        {
-            outcomes += Self.outcomes(statuses, kind: .keyword)
-        }
-
-        // 2. Negate every selected term in its source ad group (graduated + negate-only).
         let negating = Self.negateTargets(
             graduating: graduating,
             negateSelected: negateTerms.filter { selectedNegate.contains($0.id) }
         )
-        for (adGroupId, terms) in Dictionary(grouping: negating, by: { $0.adGroupId ?? "" })
-            where !adGroupId.isEmpty
-        {
-            guard let campaignId = terms.first?.campaignId else { continue }
-            if let statuses = try? await repository.createNegativeExact(
-                campaignId: campaignId, adGroupId: adGroupId, terms: terms.map(\.term)
-            ) {
-                outcomes += Self.outcomes(statuses, kind: .negative)
-            }
-        }
+
+        var outcomes = await graduate(
+            graduating, into: targetCampaignId, adGroupId: targetAdGroupId, using: repository
+        )
+        outcomes += await negate(negating, using: repository)
 
         results = outcomes
         step = .results
+    }
+
+    /// Graduates winners into the target ad group: text queries → exact keywords,
+    /// ASINs → exact product targets.
+    private func graduate(
+        _ terms: [SearchTerm], into campaignId: String, adGroupId: String,
+        using repository: KeywordWriteRepository
+    ) async -> [WriteOutcome] {
+        var outcomes: [WriteOutcome] = []
+        let keywords = terms.filter { !$0.isASIN }.map(\.term)
+        let asins = terms.filter(\.isASIN).map(\.term)
+        if !keywords.isEmpty,
+           let statuses = try? await repository.createExactKeywords(
+               campaignId: campaignId, adGroupId: adGroupId, terms: keywords, bid: bid
+           )
+        {
+            outcomes += Self.outcomes(statuses, kind: .keyword)
+        }
+        if !asins.isEmpty,
+           let statuses = try? await repository.createProductTargets(
+               campaignId: campaignId, adGroupId: adGroupId, asins: asins, bid: bid
+           )
+        {
+            outcomes += Self.outcomes(statuses, kind: .keyword)
+        }
+        return outcomes
+    }
+
+    /// Negates each term in its source ad group: keywords → negative keywords,
+    /// ASINs → negative product targets.
+    private func negate(
+        _ terms: [SearchTerm], using repository: KeywordWriteRepository
+    ) async -> [WriteOutcome] {
+        var outcomes: [WriteOutcome] = []
+        for (adGroupId, group) in Dictionary(grouping: terms, by: { $0.adGroupId ?? "" })
+            where !adGroupId.isEmpty
+        {
+            guard let campaignId = group.first?.campaignId else { continue }
+            let keywords = group.filter { !$0.isASIN }.map(\.term)
+            let asins = group.filter(\.isASIN).map(\.term)
+            if !keywords.isEmpty,
+               let statuses = try? await repository.createNegativeExact(
+                   campaignId: campaignId, adGroupId: adGroupId, terms: keywords
+               )
+            {
+                outcomes += Self.outcomes(statuses, kind: .negative)
+            }
+            if !asins.isEmpty,
+               let statuses = try? await repository.createNegativeProductTargets(
+                   campaignId: campaignId, adGroupId: adGroupId, asins: asins
+               )
+            {
+                outcomes += Self.outcomes(statuses, kind: .negative)
+            }
+        }
+        return outcomes
     }
 
     // MARK: - Pure helpers (testable)
