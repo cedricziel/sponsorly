@@ -76,22 +76,27 @@ The Settings screen SHALL reflect the current authentication state, showing a "S
 
 ### Requirement: Select the Amazon advertising region
 
-The app SHALL let the user choose the Amazon region (North America, Europe, or Far East) before signing in, and SHALL persist the selection across launches. The chosen region SHALL determine the authorize host, the token endpoint, and the per-region token storage. The selection SHALL be fixed while signed in (changeable after signing out).
+The app SHALL let the user connect to one or more Amazon regions (North America, Europe, Far East) **independently and concurrently**. Each region maintains its own sign-in state and stored tokens; signing in or out of one region SHALL NOT affect the others. The set of connected regions SHALL persist across launches, and on launch each region's signed-in state SHALL be evaluated against the credentials stored for that region.
 
-#### Scenario: Region selectable when signed out
+#### Scenario: Connect a region
 
-- **WHEN** the user is signed out
-- **THEN** the Amazon Ads Account section offers a region picker (North America / Europe / Far East), and the chosen region is used for the next sign-in's authorize host and token endpoint
+- **WHEN** the user starts sign-in for a given region
+- **THEN** the authorization uses that region's authorize host and token endpoint, the resulting tokens are stored under that region, and the region becomes connected without changing the state of any other region
 
-#### Scenario: Selection persists and scopes restored state
+#### Scenario: Multiple regions connected at once
 
-- **WHEN** the user has selected a region and relaunches the app
-- **THEN** the previously selected region is restored, and signed-in state is evaluated against the credentials stored for that region
+- **WHEN** the user has completed sign-in for more than one region
+- **THEN** all of those regions are simultaneously connected, and account discovery (see `advertising-accounts`) spans every connected region
 
-#### Scenario: Region shown when signed in
+#### Scenario: Disconnect one region
 
-- **WHEN** the user is signed in
-- **THEN** the Amazon Ads Account section displays the connected region
+- **WHEN** the user signs out of one connected region
+- **THEN** only that region's stored credentials are cleared and it becomes disconnected, while other connected regions remain signed in
+
+#### Scenario: Connection set restored on launch
+
+- **WHEN** the app relaunches
+- **THEN** each region that has stored credentials is restored as connected, and regions without stored credentials are shown as disconnected
 
 ### Requirement: Credentials supplied via build configuration
 
