@@ -56,7 +56,7 @@ struct ReportStatusResponse: Decodable {
 
 /// A decoded campaign row from a Sponsored Products report. Fields are optional
 /// because the present columns depend on the requested `columns` / `timeUnit`.
-struct CampaignReportRow: Decodable, Hashable {
+struct CampaignReportRow: Codable, Hashable {
     let campaignId: String?
     let campaignName: String?
     let date: String?

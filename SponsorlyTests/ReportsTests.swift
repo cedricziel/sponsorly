@@ -2,15 +2,16 @@ import AmazonAdsCore
 @testable import Sponsorly
 import XCTest
 
-final class ReportGunzipTests: XCTestCase {
-    /// gzip of: [{"campaignId":"1","campaignName":"Brand","cost":5.5,"sales30d":20.0,"impressions":100,"clicks":4}]
-    private let gzipBase64 = """
-    H4sIAHkMK2oAA4uuVkpOzC1IzEzP80xRslIyVNKBC/gl5qYChZyKEvNSQML5xSVKVqZ6pjpKxYk5qcXGBkANRgZ6BjpKmbkFRanFxZn5ecVKVoYGQJHknMzkbCDHpDYWAOglS9xjAAAA
-    """
+/// gzip of: [{"campaignId":"1","campaignName":"Brand","cost":5.5,"sales30d":20.0,"impressions":100,"clicks":4}]
+private enum ReportFixture {
+    static let campaignGzip = Data(base64Encoded:
+        "H4sIAHkMK2oAA4uuVkpOzC1IzEzP80xRslIyVNKBC/gl5qYChZyKEvNSQML5xSVKVqZ6pjpKxYk5qcXGBkA"
+            + "NRgZ6BjpKmbkFRanFxZn5ecVKVoYGQJHknMzkbCDHpDYWAOglS9xjAAAA")!
+}
 
+final class ReportGunzipTests: XCTestCase {
     func testDecompressesGzip() throws {
-        let gzip = try XCTUnwrap(Data(base64Encoded: gzipBase64.trimmingCharacters(in: .whitespacesAndNewlines)))
-        let json = try XCTUnwrap(ReportGunzip.decompress(gzip))
+        let json = try XCTUnwrap(ReportGunzip.decompress(ReportFixture.campaignGzip))
         let rows = try JSONDecoder().decode([CampaignReportRow].self, from: json)
         XCTAssertEqual(rows.first?.campaignId, "1")
         XCTAssertEqual(rows.first?.cost, 5.5)
@@ -30,10 +31,6 @@ final class ReportGunzipTests: XCTestCase {
 }
 
 final class ReportingRepositoryTests: XCTestCase {
-    private let gzipBase64 = """
-    H4sIAHkMK2oAA4uuVkpOzC1IzEzP80xRslIyVNKBC/gl5qYChZyKEvNSQML5xSVKVqZ6pjpKxYk5qcXGBkANRgZ6BjpKmbkFRanFxZn5ecVKVoYGQJHknMzkbCDHpDYWAOglS9xjAAAA
-    """
-
     override func setUp() {
         super.setUp()
         MockURLProtocol.reset()
@@ -61,7 +58,7 @@ final class ReportingRepositoryTests: XCTestCase {
     }
 
     func testFullLifecycleHappyPath() async throws {
-        let gzip = try XCTUnwrap(Data(base64Encoded: gzipBase64.trimmingCharacters(in: .whitespacesAndNewlines)))
+        let gzip = ReportFixture.campaignGzip
         MockURLProtocol.handler = { [response] request in
             let url = request.url!
             if request.httpMethod == "POST", url.path.hasSuffix("/reporting/reports") {

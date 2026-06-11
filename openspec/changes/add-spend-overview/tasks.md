@@ -9,15 +9,15 @@
 
 ## 2. Report cache
 
-- [ ] 2.1 Add a disk cache keyed by `(profileId, reportTypeId, startDate, endDate, timeUnit)` (Caches dir, JSON)
-- [ ] 2.2 Immutable past-day ranges long-lived; today-inclusive ranges short TTL / always refresh
-- [ ] 2.3 Unit tests for cache round-trip + key/expiry behavior
+- [x] 2.1 Add a disk cache keyed by `(profileId, reportTypeId, startDate, endDate, timeUnit)` (Caches dir, JSON)
+- [x] 2.2 Immutable past-day ranges long-lived; today-inclusive ranges short TTL / always refresh
+- [x] 2.3 Unit tests for cache round-trip + key/expiry behavior
 
 ## 3. Budget usage (live today)
 
-- [ ] 3.1 Add `BudgetUsageRepository` calling `spCampaignsBudgetUsage` over the scoped client
-- [ ] 3.2 Approximate today's spend as Σ(`budget × budgetUsagePercent`); paged
-- [ ] 3.3 Unit tests with a mocked URL protocol
+- [x] 3.1 Add `BudgetUsageRepository` calling `spCampaignsBudgetUsage` over the scoped client
+- [x] 3.2 Approximate today's spend as Σ(`budget × budgetUsagePercent`); paged
+- [x] 3.3 Unit tests with a mocked URL protocol
 
 ## 4. View model + aggregation
 
