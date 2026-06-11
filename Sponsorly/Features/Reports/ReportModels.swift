@@ -14,6 +14,13 @@ struct ReportRequest: Encodable {
         let reportTypeId: String
         let timeUnit: String
         let format: String
+        var filters: [Filter]?
+    }
+
+    /// A report column filter, e.g. scope to one campaign.
+    struct Filter: Encodable {
+        let field: String
+        let values: [String]
     }
 
     /// A campaign-level Sponsored Products report.
@@ -38,6 +45,45 @@ struct ReportRequest: Encodable {
             )
         )
     }
+
+    /// A search-term report scoped to one campaign.
+    static func spSearchTerm(
+        name: String,
+        startDate: String,
+        endDate: String,
+        campaignId: String
+    ) -> ReportRequest {
+        ReportRequest(
+            name: name,
+            startDate: startDate,
+            endDate: endDate,
+            configuration: Configuration(
+                adProduct: "SPONSORED_PRODUCTS",
+                groupBy: ["searchTerm"],
+                columns: SearchTermReportRow.columns,
+                reportTypeId: "spSearchTerm",
+                timeUnit: "SUMMARY",
+                format: "GZIP_JSON",
+                filters: [Filter(field: "campaignId", values: [campaignId])]
+            )
+        )
+    }
+}
+
+/// A decoded row from a Sponsored Products search-term report.
+struct SearchTermReportRow: Decodable, Hashable {
+    let searchTerm: String?
+    let campaignId: String?
+    let adGroupId: String?
+    let clicks: Int?
+    let cost: Double?
+    let sales30d: Double?
+    let purchases30d: Int? // orders
+
+    static let columns = [
+        "searchTerm", "campaignId", "adGroupId", "clicks",
+        "cost", "sales30d", "purchases30d",
+    ]
 }
 
 /// `createAsyncReport` response.

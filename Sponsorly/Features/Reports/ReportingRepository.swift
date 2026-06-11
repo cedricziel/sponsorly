@@ -35,8 +35,13 @@ actor ReportingRepository {
         self.urlSession = urlSession
     }
 
-    /// Full lifecycle: returns the decoded campaign rows for a report request.
+    /// Full lifecycle for campaign rows.
     func fetchCampaignRows(_ request: ReportRequest) async throws -> [CampaignReportRow] {
+        try await fetchRows(request)
+    }
+
+    /// Full lifecycle for any report row type: create → poll → download → decode.
+    func fetchRows<Row: Decodable & Sendable>(_ request: ReportRequest) async throws -> [Row] {
         let reportId = try await createReport(request)
         let downloadURL = try await pollUntilReady(reportId)
         return try await downloadRows(from: downloadURL)
@@ -69,7 +74,7 @@ actor ReportingRepository {
         throw ReportError.timedOut
     }
 
-    private func downloadRows(from url: URL) async throws -> [CampaignReportRow] {
+    private func downloadRows<Row: Decodable>(from url: URL) async throws -> [Row] {
         // Presigned S3 URL — no Amazon auth headers.
         let (data, response) = try await urlSession.data(from: url)
         guard let http = response as? HTTPURLResponse else { throw ReportError.invalidResponse }
@@ -77,7 +82,7 @@ actor ReportingRepository {
             throw ReportError.http(status: http.statusCode)
         }
         guard let json = ReportGunzip.decompress(data) else { throw ReportError.decompressionFailed }
-        return try JSONDecoder().decode([CampaignReportRow].self, from: json)
+        return try JSONDecoder().decode([Row].self, from: json)
     }
 
     // MARK: - HTTP
