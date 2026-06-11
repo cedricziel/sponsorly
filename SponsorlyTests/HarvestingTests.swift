@@ -54,6 +54,25 @@ final class HarvestScorerTests: XCTestCase {
     }
 }
 
+final class HarvestViewModelLogicTests: XCTestCase {
+    private func term(_ name: String) -> SearchTerm {
+        SearchTerm(term: name, campaignId: "c", adGroupId: "ag", clicks: 1, spend: 1, sales: 1, orders: 1)
+    }
+
+    func testGraduatedTermsAreAlsoNegated() {
+        let result = HarvestViewModel.negateTargets(
+            graduating: [term("a"), term("b")], negateSelected: [term("c")]
+        )
+        XCTAssertEqual(Set(result.map(\.term)), ["a", "b", "c"])
+    }
+
+    func testOutcomesMapAndSort() {
+        let outcomes = HarvestViewModel.outcomes(["y": .succeeded, "x": .alreadyExists], kind: .keyword)
+        XCTAssertEqual(outcomes.map(\.term), ["x", "y"]) // sorted
+        XCTAssertTrue(outcomes.allSatisfy { $0.kind == .keyword })
+    }
+}
+
 final class KeywordWriteRepositoryTests: XCTestCase {
     override func setUp() {
         super.setUp()
