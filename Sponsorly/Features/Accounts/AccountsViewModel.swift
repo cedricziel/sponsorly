@@ -16,6 +16,11 @@ final class AccountsViewModel {
     private let repository: AccountsRepository
     private let clientID: String?
 
+    #if DEBUG
+        /// When set (preview seeding), `load()` keeps the injected sample data.
+        fileprivate var isPreviewSeeded = false
+    #endif
+
     init(auth: AuthViewModel) {
         self.auth = auth
         let id = try? LWAConfig.fromBundle(region: LWAConfig.defaultRegion).clientID
@@ -40,6 +45,9 @@ final class AccountsViewModel {
 
     /// Fetches accounts for every connected region and reconciles the selection.
     func load() async {
+        #if DEBUG
+            if isPreviewSeeded { return }
+        #endif
         reconcileActive()
         guard hasConnectedRegions else {
             accounts = ConnectedAccounts()
@@ -91,6 +99,19 @@ final class AccountsViewModel {
 extension AccountsViewModel {
     static func previewModel(auth: AuthViewModel = .previewModel(connected: [])) -> AccountsViewModel {
         AccountsViewModel(auth: auth)
+    }
+
+    /// A model seeded with sample accounts for previews; `load()` won't overwrite it.
+    static func loaded(
+        _ accounts: ConnectedAccounts,
+        active: ActiveProfileSelection? = nil
+    ) -> AccountsViewModel {
+        let regions = Set(accounts.profiles.map(\.region)).union(accounts.failures.keys)
+        let model = AccountsViewModel(auth: .previewModel(connected: regions))
+        model.accounts = accounts
+        model.activeSelection = active
+        model.isPreviewSeeded = true
+        return model
     }
 }
 #endif

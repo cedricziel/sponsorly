@@ -38,7 +38,7 @@
 - [x] 6.1 Add `Sponsorly/Features/Accounts/` with an account list grouped by region → manager account → profile, per Apple HIG
 - [x] 6.2 Indicate and allow switching the active profile; reflect the active profile elsewhere (Settings)
 - [x] 6.3 Loading, empty, and per-region-error states (non-blocking notice); pull-to-refresh
-- [ ] 6.4 `#Preview`s covering connected/empty/partial-failure states
+- [x] 6.4 `#Preview`s covering connected/empty/partial-failure states
 
 ## 7. Wire-up & verification
 

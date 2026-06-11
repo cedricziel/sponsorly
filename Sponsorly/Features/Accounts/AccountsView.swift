@@ -88,3 +88,38 @@ struct AccountsView: View {
     }
     .environment(AccountsViewModel.previewModel())
 }
+
+#Preview("Connected") {
+    let profiles = [
+        AdvertisingProfile(
+            profileId: "1", region: .europe, accountName: "My DE Store",
+            countryCode: "DE", accountType: "seller", managerAccountName: nil
+        ),
+        AdvertisingProfile(
+            profileId: "2", region: .europe, accountName: "Agency Brand",
+            countryCode: "FR", accountType: nil, managerAccountName: "Acme Agency"
+        ),
+        AdvertisingProfile(
+            profileId: "9", region: .northAmerica, accountName: "US Vendor",
+            countryCode: "US", accountType: "vendor", managerAccountName: nil
+        )
+    ]
+    return NavigationStack { AccountsView() }
+        .environment(AccountsViewModel.loaded(
+            ConnectedAccounts(profiles: profiles),
+            active: ActiveProfileSelection(region: .europe, profileId: "1")
+        ))
+}
+
+#Preview("Partial failure") {
+    let profiles = [
+        AdvertisingProfile(
+            profileId: "1", region: .europe, accountName: "My DE Store",
+            countryCode: "DE", accountType: "seller", managerAccountName: nil
+        )
+    ]
+    var accounts = ConnectedAccounts(profiles: profiles)
+    accounts.failures[.northAmerica] = "Amazon returned HTTP 500."
+    return NavigationStack { AccountsView() }
+        .environment(AccountsViewModel.loaded(accounts))
+}
