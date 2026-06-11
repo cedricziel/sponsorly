@@ -20,9 +20,11 @@ Constraints unchanged: SwiftUI, iOS 26, Swift 5.10, strict concurrency, XcodeGen
 
 ## Decisions
 
-### D1: Use the generated SP v3 client over the scoped transport
+### D1: Direct POST requests with the vendored content type (revised)
 
-Build `AmazonAdsSponsoredProductsAPIv3.Client(serverURL: scopedClient.baseURL, transport: scopedClient.transport)` and call `ListSponsoredProductsCampaigns` / `ListSponsoredProductsAdGroups`. The transport already stamps Bearer + ClientId + `Scope: <active profileId>`; the generated client supplies the vendored `Accept`/`Content-Type`. **Contrast with `advertising-accounts` D2** (direct requests): there the GET was trivial and the generated types clunky; here the POST-with-vendored-content-type is exactly what the generated client is good at.
+`CampaignsRepository` issues `POST <base>/sp/campaigns/list` and `/sp/adGroups/list` directly — setting `Content-Type`/`Accept` to the vendored media type (`application/vnd.spCampaign.v3+json`, `application/vnd.spAdGroup.v3+json`), the auth headers (Bearer + ClientId + `Scope: <profileId>`), and a JSON filter body — then decoding small `Decodable` models.
+
+**Revised from the original plan** (generated `AmazonAdsSponsoredProductsAPIv3` client): the generated Input/Output is extremely verbose (vendored-named enum body cases, required typed header structs), and the "content-type negotiation" it provides is, in practice, just two header strings. Going direct is uniform with `advertising-accounts` D2, decodes straight into the UI models, and avoids wrestling generated types — the build came up green on the first try. The `ScopedClient` now also carries `clientID` + a `tokenProvider`, so the repository has everything it needs; the generated SP/SB/SD clients remain available via `ScopedClient.transport` for anything that genuinely needs them later.
 
 ### D2: Read-only entity data, not metrics
 
