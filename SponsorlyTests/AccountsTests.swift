@@ -53,6 +53,24 @@ final class AdvertisingAccountAggregatorTests: XCTestCase {
     }
 }
 
+final class CountryFlagTests: XCTestCase {
+    func testKnownCountries() {
+        XCTAssertEqual(CountryFlag.emoji("DE"), "🇩🇪")
+        XCTAssertEqual(CountryFlag.emoji("us"), "🇺🇸")
+        XCTAssertEqual(CountryFlag.emoji("JP"), "🇯🇵")
+    }
+
+    func testUKMapsToGBFlag() {
+        XCTAssertEqual(CountryFlag.emoji("UK"), CountryFlag.emoji("GB"))
+    }
+
+    func testInvalidInputs() {
+        XCTAssertNil(CountryFlag.emoji(nil))
+        XCTAssertNil(CountryFlag.emoji("USA"))
+        XCTAssertNil(CountryFlag.emoji("1"))
+    }
+}
+
 final class ActiveProfileStoreTests: XCTestCase {
     private var defaults: UserDefaults!
 

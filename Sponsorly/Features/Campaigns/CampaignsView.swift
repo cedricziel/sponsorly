@@ -9,10 +9,16 @@ struct CampaignsView: View {
                 description: Text("Sign in to your Amazon Ads account in Settings to load your campaigns.")
             )
             .navigationTitle("Campaigns")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    AccountSwitcher()
+                }
+            }
         }
     }
 }
 
 #Preview {
     CampaignsView()
+        .environment(AccountsViewModel.previewModel())
 }

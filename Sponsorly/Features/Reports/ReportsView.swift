@@ -9,10 +9,16 @@ struct ReportsView: View {
                 description: Text("Performance reports will appear here once campaigns are connected.")
             )
             .navigationTitle("Reports")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    AccountSwitcher()
+                }
+            }
         }
     }
 }
 
 #Preview {
     ReportsView()
+        .environment(AccountsViewModel.previewModel())
 }
