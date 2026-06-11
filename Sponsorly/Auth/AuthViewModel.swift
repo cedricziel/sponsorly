@@ -2,28 +2,24 @@ import AmazonAdsCore
 import Foundation
 import Observation
 
-/// Observable auth state for the UI. Bridges the `@MainActor` view to the
-/// `LWAAuthService` actor and the loopback web authenticator, and owns the
-/// user-selected Amazon region.
+/// Observable auth state for the UI. Each Amazon region (NA/EU/FE) is connected
+/// independently; sign in/out operate per region. Bridges the `@MainActor` view
+/// to the `LWAAuthService` actor and the loopback web authenticator.
 @MainActor
 @Observable
 final class AuthViewModel {
-    private(set) var isSignedIn = false
-    private(set) var isBusy = false
-    private(set) var selectedRegion: AmazonRegion
+    private(set) var connectedRegions: Set<AmazonRegion> = []
+    private(set) var busyRegion: AmazonRegion?
     var errorMessage: String?
 
     private let configErrorMessage: String?
     private let storage = KeychainTokenStorage()
     private let authenticator = LoopbackWebAuthenticator()
 
-    private static let regionDefaultsKey = "SponsorlySelectedAmazonRegion"
-
     init() {
-        let region = Self.loadRegion()
-        selectedRegion = region
         do {
-            _ = try LWAConfig.fromBundle(region: region)
+            // Credentials are region-independent; probe once.
+            _ = try LWAConfig.fromBundle(region: LWAConfig.defaultRegion)
             configErrorMessage = nil
         } catch {
             configErrorMessage = (error as? LocalizedError)?.errorDescription
@@ -31,74 +27,74 @@ final class AuthViewModel {
         }
     }
 
-    /// Restores signed-in state for the selected region (stored refresh token).
+    func isConnected(_ region: AmazonRegion) -> Bool { connectedRegions.contains(region) }
+    func isBusy(_ region: AmazonRegion) -> Bool { busyRegion == region }
+
+    /// Restores per-region connection state from stored refresh tokens.
     func restore() async {
-        guard let (_, service) = try? makeService() else { return }
-        isSignedIn = await service.isAuthenticated()
+        var connected: Set<AmazonRegion> = []
+        for region in AmazonRegion.allCases {
+            guard let (_, service) = try? makeService(region: region) else { continue }
+            if await service.isAuthenticated() {
+                connected.insert(region)
+            }
+        }
+        connectedRegions = connected
     }
 
-    /// Changes the active region, persists it, and refreshes signed-in state.
-    func selectRegion(_ region: AmazonRegion) {
-        guard region != selectedRegion else { return }
-        selectedRegion = region
-        UserDefaults.standard.set(region.rawValue, forKey: Self.regionDefaultsKey)
-        Task { await restore() }
-    }
-
-    func signIn() async {
-        guard let (config, service) = try? makeService() else {
+    func signIn(region: AmazonRegion) async {
+        guard let (config, service) = try? makeService(region: region) else {
             errorMessage = configErrorMessage ?? LWAError.missingCredentials.errorDescription
             return
         }
-        isBusy = true
+        busyRegion = region
         errorMessage = nil
-        defer { isBusy = false }
+        defer { busyRegion = nil }
 
         do {
             let request = try await service.makeAuthorizationRequest()
             let callbackURL = try await authenticator.authenticate(
                 authorizeURL: request.url, port: config.callbackPort)
             try await service.handleCallback(url: callbackURL, request: request)
-            isSignedIn = true
+            connectedRegions.insert(region)
         } catch LWAError.userCancelled {
-            // Benign: the user dismissed the sheet. Stay signed out, no error.
+            // Benign: the user dismissed the sheet. No change, no error.
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription
                 ?? error.localizedDescription
         }
     }
 
-    func signOut() async {
-        guard let (_, service) = try? makeService() else { return }
+    func signOut(region: AmazonRegion) async {
+        guard let (_, service) = try? makeService(region: region) else { return }
         do {
             try await service.signOut()
-            isSignedIn = false
+            connectedRegions.remove(region)
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription
                 ?? error.localizedDescription
         }
     }
 
-    private func makeService() throws -> (LWAConfig, LWAAuthService) {
-        let config = try LWAConfig.fromBundle(region: selectedRegion)
-        return (config, LWAAuthService(config: config, storage: storage))
+    /// A token provider for a connected region — used by the accounts layer to
+    /// build region-scoped API clients.
+    func tokenProvider(for region: AmazonRegion) throws -> @Sendable () async throws -> String {
+        let (_, service) = try makeService(region: region)
+        return service.tokenProvider()
     }
 
-    private static func loadRegion() -> AmazonRegion {
-        if let raw = UserDefaults.standard.string(forKey: regionDefaultsKey),
-           let region = AmazonRegion(rawValue: raw) {
-            return region
-        }
-        return LWAConfig.defaultRegion
+    private func makeService(region: AmazonRegion) throws -> (LWAConfig, LWAAuthService) {
+        let config = try LWAConfig.fromBundle(region: region)
+        return (config, LWAAuthService(config: config, storage: storage))
     }
 }
 
 #if DEBUG
 extension AuthViewModel {
-    /// Preview/testing helper to force a presentation state.
-    static func previewModel(signedIn: Bool) -> AuthViewModel {
+    /// Preview/testing helper to force connection state.
+    static func previewModel(connected: Set<AmazonRegion>) -> AuthViewModel {
         let model = AuthViewModel()
-        model.isSignedIn = signedIn
+        model.connectedRegions = connected
         return model
     }
 }

@@ -11,44 +11,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Amazon Ads Account") {
-                    if auth.isSignedIn {
-                        LabeledContent("Status") {
-                            Label("Connected", systemImage: "checkmark.seal.fill")
-                                .labelStyle(.titleAndIcon)
-                                .foregroundStyle(.green)
-                        }
-                        LabeledContent("Region", value: auth.selectedRegion.displayName)
-                        Button("Sign Out", role: .destructive) {
-                            Task { await auth.signOut() }
-                        }
-                    } else {
-                        Picker(
-                            "Region",
-                            selection: Binding(
-                                get: { auth.selectedRegion },
-                                set: { auth.selectRegion($0) }
-                            )
-                        ) {
-                            ForEach(AmazonRegion.allCases) { region in
-                                Text(region.displayName).tag(region)
-                            }
-                        }
-                        .disabled(auth.isBusy)
-
-                        Button {
-                            Task { await auth.signIn() }
-                        } label: {
-                            HStack {
-                                Text("Sign in with Amazon")
-                                if auth.isBusy {
-                                    Spacer()
-                                    ProgressView()
-                                }
-                            }
-                        }
-                        .disabled(auth.isBusy)
+                Section {
+                    ForEach(AmazonRegion.allCases) { region in
+                        regionRow(region)
                     }
+                } header: {
+                    Text("Amazon Regions")
+                } footer: {
+                    Text("Connect each region where you advertise. "
+                        + "Accounts from all connected regions appear together.")
                 }
 
                 Section("About") {
@@ -70,6 +41,33 @@ struct SettingsView: View {
             }
         }
     }
+
+    @ViewBuilder
+    private func regionRow(_ region: AmazonRegion) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(region.displayName)
+                if auth.isConnected(region) {
+                    Label("Connected", systemImage: "checkmark.seal.fill")
+                        .font(.caption)
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.green)
+                }
+            }
+            Spacer()
+            if auth.isBusy(region) {
+                ProgressView()
+            } else if auth.isConnected(region) {
+                Button("Sign Out", role: .destructive) {
+                    Task { await auth.signOut(region: region) }
+                }
+            } else {
+                Button("Sign In") {
+                    Task { await auth.signIn(region: region) }
+                }
+            }
+        }
+    }
 }
 
 private extension Bundle {
@@ -80,10 +78,10 @@ private extension Bundle {
     }
 }
 
-#Preview("Signed out") {
-    SettingsView(auth: .previewModel(signedIn: false))
+#Preview("No regions") {
+    SettingsView(auth: .previewModel(connected: []))
 }
 
-#Preview("Signed in") {
-    SettingsView(auth: .previewModel(signedIn: true))
+#Preview("EU connected") {
+    SettingsView(auth: .previewModel(connected: [.europe]))
 }
