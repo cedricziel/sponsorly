@@ -1,11 +1,11 @@
 ## 1. Async report pipeline
 
-- [ ] 1.1 Add a `ReportConfiguration` builder (adProduct=SPONSORED_PRODUCTS, reportTypeId, timeUnit, groupBy, columns, format=GZIP_JSON, dates)
-- [ ] 1.2 Add `actor ReportingRepository` with `requestReport(config) -> reportId` (`createAsyncReport`) over the scoped client
-- [ ] 1.3 `pollUntilReady(reportId)` — poll `getAsyncReport` with capped exponential backoff until COMPLETED / FAILURE / timeout
-- [ ] 1.4 `ReportDownloader`: download the report URL and decompress (try URLSession auto-decompress; fall back to a gunzip helper) → JSON rows
-- [ ] 1.5 Verify the gzip path against a real report early; keep the rest of the pipeline decompression-agnostic
-- [ ] 1.6 Decode report rows into metric models; unit tests for decode + the poll state machine (mocked URL protocol)
+- [x] 1.1 Add a `ReportConfiguration` builder (adProduct=SPONSORED_PRODUCTS, reportTypeId, timeUnit, groupBy, columns, format=GZIP_JSON, dates)
+- [x] 1.2 Add `actor ReportingRepository` with `requestReport(config) -> reportId` (`createAsyncReport`) over the scoped client
+- [x] 1.3 `pollUntilReady(reportId)` — poll `getAsyncReport` with capped exponential backoff until COMPLETED / FAILURE / timeout
+- [x] 1.4 `ReportDownloader`: download the report URL and decompress (try URLSession auto-decompress; fall back to a gunzip helper) → JSON rows
+- [x] 1.5 Verify the gzip path against a real report early; keep the rest of the pipeline decompression-agnostic
+- [x] 1.6 Decode report rows into metric models; unit tests for decode + the poll state machine (mocked URL protocol)
 
 ## 2. Report cache
 
