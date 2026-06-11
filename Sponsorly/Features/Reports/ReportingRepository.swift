@@ -30,7 +30,7 @@ actor ReportingRepository {
 
     private static let createContentType = "application/vnd.createasyncreportrequest.v3+json"
     private static let getAccept = "application/vnd.getasyncreportresponse.v3+json"
-    private static let maxPollAttempts = 12
+    private static let maxPollAttempts = 24 // ~5 min: profile-wide reports can be slow
 
     init(scopedClient: ScopedClient, urlSession: URLSession = .shared) {
         self.scopedClient = scopedClient

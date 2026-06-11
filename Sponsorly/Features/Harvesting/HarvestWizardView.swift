@@ -12,7 +12,8 @@ struct HarvestWizardView: View {
         NavigationStack {
             Group {
                 if model.isLoading, model.allTerms.isEmpty {
-                    ProgressView("Loading search terms…")
+                    ProgressView("Generating report…\nThis can take a minute or two.")
+                        .multilineTextAlignment(.center)
                 } else if let error = model.errorMessage, model.allTerms.isEmpty {
                     APIErrorView(message: error, responseBody: model.errorResponseBody) {
                         Task { await model.loadReport() }
