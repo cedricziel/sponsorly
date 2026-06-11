@@ -37,5 +37,5 @@
 - [x] 6.2 Build for the simulator
 - [x] 6.3 Run tests
 - [x] 6.4 Run `swiftformat` + `swiftlint` (lint clean)
-- [ ] 6.5 On device: select an active profile, confirm real campaigns load, open one, confirm ad groups load; switch profile and confirm reload
-- [ ] 6.6 Commit as semantic commits (scoped-client seam, repository/models, campaigns UI, detail), one logical change per commit
+- [x] 6.5 On device: select an active profile, confirm real campaigns load, open one, confirm ad groups load; switch profile and confirm reload
+- [x] 6.6 Commit as semantic commits (scoped-client seam, repository/models, campaigns UI, detail), one logical change per commit
