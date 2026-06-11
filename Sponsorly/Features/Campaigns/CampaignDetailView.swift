@@ -46,7 +46,11 @@ struct CampaignDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                     ForEach(model.adGroups) { adGroup in
-                        AdGroupRow(adGroup: adGroup)
+                        NavigationLink {
+                            AdGroupDetailView(adGroup: adGroup)
+                        } label: {
+                            AdGroupRow(adGroup: adGroup)
+                        }
                     }
                 }
             }
