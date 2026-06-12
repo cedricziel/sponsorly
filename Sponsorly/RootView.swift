@@ -12,10 +12,10 @@ struct RootView: View {
 
     var body: some View {
         TabView {
+            ReportsView()
+                .tabItem { Label("Overview", systemImage: "chart.bar.xaxis") }
             CampaignsView()
                 .tabItem { Label("Campaigns", systemImage: "megaphone") }
-            ReportsView()
-                .tabItem { Label("Reports", systemImage: "chart.bar.xaxis") }
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
         }
