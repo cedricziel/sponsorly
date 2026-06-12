@@ -4,6 +4,20 @@ import SwiftUI
 struct ReportsView: View {
     @Environment(AccountsViewModel.self) private var accounts
     @State private var model = SpendOverviewViewModel()
+    @State private var selectedDate: Date?
+
+    /// The active profile's currency, used to format all monetary figures.
+    private var currency: String? {
+        accounts.activeProfile?.currencyCode
+    }
+
+    /// The trend point nearest the scrubbed x-position, if any.
+    private var selectedPoint: DailySpend? {
+        guard let selectedDate else { return nil }
+        return model.trend.min {
+            abs($0.date.timeIntervalSince(selectedDate)) < abs($1.date.timeIntervalSince(selectedDate))
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -52,8 +66,8 @@ struct ReportsView: View {
 
     private var headlineTiles: some View {
         HStack(spacing: 12) {
-            MetricTile(title: "Spend (30d)", value: Money.string(model.headline.spend))
-            MetricTile(title: "Sales (30d)", value: Money.string(model.headline.sales))
+            MetricTile(title: "Spend (30d)", value: Money.string(model.headline.spend, currencyCode: currency))
+            MetricTile(title: "Sales (30d)", value: Money.string(model.headline.sales, currencyCode: currency))
             MetricTile(title: "ACOS", value: Money.percent(model.headline.acos))
         }
     }
@@ -66,7 +80,7 @@ struct ReportsView: View {
                     Text("approx.").font(.caption2).foregroundStyle(.tertiary)
                 }
                 Spacer()
-                Text(model.todaySpend.map(Money.string) ?? "—")
+                Text(model.todaySpend.map { Money.string($0, currencyCode: currency) } ?? "—")
                     .font(.title2.weight(.semibold))
                     .contentTransition(.numericText())
             }
@@ -76,15 +90,38 @@ struct ReportsView: View {
     private var trendCard: some View {
         OverviewCard {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Spend trend (30d)").font(.subheadline).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Spend trend (30d)").font(.subheadline).foregroundStyle(.secondary)
+                    Spacer()
+                    if let selectedPoint {
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(Money.string(selectedPoint.spend, currencyCode: currency))
+                                .font(.callout.weight(.semibold))
+                                .contentTransition(.numericText())
+                            Text(selectedPoint.date, format: .dateTime.month().day())
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 Chart(model.trend) { point in
                     LineMark(
                         x: .value("Date", point.date),
                         y: .value("Spend", point.spend)
                     )
                     .interpolationMethod(.monotone)
+
+                    if let selectedPoint, selectedPoint.id == point.id {
+                        RuleMark(x: .value("Date", selectedPoint.date))
+                            .foregroundStyle(.secondary.opacity(0.3))
+                        PointMark(
+                            x: .value("Date", selectedPoint.date),
+                            y: .value("Spend", selectedPoint.spend)
+                        )
+                        .symbolSize(70)
+                    }
                 }
                 .frame(height: 140)
+                .chartXSelection(value: $selectedDate)
             }
         }
     }
@@ -98,7 +135,7 @@ struct ReportsView: View {
                         Text(campaign.name).lineLimit(1)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 1) {
-                            Text(Money.string(campaign.spend)).font(.callout.weight(.medium))
+                            Text(Money.string(campaign.spend, currencyCode: currency)).font(.callout.weight(.medium))
                             Text("ACOS \(Money.percent(campaign.acos))")
                                 .font(.caption2).foregroundStyle(.secondary)
                         }
@@ -136,10 +173,15 @@ struct OverviewCard<Content: View>: View {
     }
 }
 
-/// Number formatting for the overview (currency symbol is a follow-up).
+/// Number formatting for the overview. When a profile's `currencyCode` is
+/// known, amounts render in that currency; otherwise they fall back to a plain
+/// two-decimal number.
 enum Money {
-    static func string(_ value: Double) -> String {
-        value.formatted(.number.precision(.fractionLength(2)))
+    static func string(_ value: Double, currencyCode: String? = nil) -> String {
+        if let currencyCode {
+            return value.formatted(.currency(code: currencyCode).precision(.fractionLength(2)))
+        }
+        return value.formatted(.number.precision(.fractionLength(2)))
     }
 
     static func percent(_ ratio: Double?) -> String {

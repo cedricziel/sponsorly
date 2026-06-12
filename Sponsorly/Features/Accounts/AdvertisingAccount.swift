@@ -4,26 +4,31 @@ import Foundation
 /// A selectable advertising profile, flattened from the package's profile and
 /// manager-account types and tagged with the region it came from. The `profileId`
 /// is the unit that scopes Amazon Ads API calls.
-struct AdvertisingProfile: Identifiable, Sendable, Hashable {
+struct AdvertisingProfile: Identifiable, Hashable {
     let profileId: String
     let region: AmazonRegion
     let accountName: String
     let countryCode: String?
+    let currencyCode: String?
     let accountType: String?
     let managerAccountName: String?
 
     /// Stable identity across regions (the same profileId can exist per region).
-    var id: String { "\(region.rawValue):\(profileId)" }
+    var id: String {
+        "\(region.rawValue):\(profileId)"
+    }
 }
 
 /// The aggregated result of discovering accounts across connected regions:
 /// the flattened, deduped profiles plus any per-region failures.
-struct ConnectedAccounts: Sendable {
+struct ConnectedAccounts {
     var profiles: [AdvertisingProfile] = []
     /// Region → human-readable error for regions whose fetch failed.
     var failures: [AmazonRegion: String] = [:]
 
-    var isEmpty: Bool { profiles.isEmpty && failures.isEmpty }
+    var isEmpty: Bool {
+        profiles.isEmpty && failures.isEmpty
+    }
 }
 
 extension AdvertisingProfile {
@@ -34,6 +39,7 @@ extension AdvertisingProfile {
             region: region,
             accountName: profile.accountInfo.name,
             countryCode: profile.countryCode,
+            currencyCode: profile.currencyCode,
             accountType: profile.accountInfo.type,
             managerAccountName: nil
         )
@@ -47,6 +53,7 @@ extension AdvertisingProfile {
             region: region,
             accountName: linked.accountName,
             countryCode: Marketplace.countryCode(for: linked.marketplaceId),
+            currencyCode: nil,
             accountType: nil,
             managerAccountName: managerName
         )
@@ -91,6 +98,7 @@ enum AdvertisingAccountAggregator {
             region: lhs.region,
             accountName: lhs.accountName.isEmpty ? rhs.accountName : lhs.accountName,
             countryCode: lhs.countryCode ?? rhs.countryCode,
+            currencyCode: lhs.currencyCode ?? rhs.currencyCode,
             accountType: lhs.accountType ?? rhs.accountType,
             managerAccountName: lhs.managerAccountName ?? rhs.managerAccountName
         )
