@@ -52,8 +52,26 @@ actor ReportingRepository {
     func createReport(_ request: ReportRequest) async throws -> String {
         let url = scopedClient.baseURL.appendingPathComponent("reporting/reports")
         let body = try JSONEncoder().encode(request)
-        let data = try await send(.post, url: url, contentType: Self.createContentType, body: body)
-        return try JSONDecoder().decode(CreateReportResponse.self, from: data).reportId
+        do {
+            let data = try await send(.post, url: url, contentType: Self.createContentType, body: body)
+            return try JSONDecoder().decode(CreateReportResponse.self, from: data).reportId
+        } catch let ReportError.http(status, responseBody) where status == 425 {
+            // Amazon dedupes identical report requests: a 425 means this exact
+            // report is already registered — typically a prior run whose network
+            // task was cancelled client-side *after* Amazon had accepted it. The
+            // existing report's id is in the error body; reuse it so we poll the
+            // in-flight report instead of failing.
+            guard let existingId = Self.duplicateReportId(from: responseBody) else {
+                throw ReportError.http(status: status, body: responseBody)
+            }
+            return existingId
+        }
+    }
+
+    /// Parses the existing report id out of a 425 duplicate error body.
+    nonisolated static func duplicateReportId(from body: String?) -> String? {
+        guard let body, let data = body.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(DuplicateReportError.self, from: data).existingReportId
     }
 
     func pollUntilReady(_ reportId: String) async throws -> URL {

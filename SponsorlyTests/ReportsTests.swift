@@ -81,6 +81,52 @@ final class ReportingRepositoryTests: XCTestCase {
         XCTAssertEqual(rows.first?.cost, 5.5)
     }
 
+    func testDuplicateReportReusesExistingReport() async throws {
+        let gzip = ReportFixture.campaignGzip
+        let existingId = "77af9ece-1c6b-47d1-a6b1-79910c35e661"
+        MockURLProtocol.handler = { [response] request in
+            let url = request.url!
+            if request.httpMethod == "POST", url.path.hasSuffix("/reporting/reports") {
+                let body = #"{"code":"425","detail":"The Request is a duplicate of : \#(existingId)"}"#
+                return (response(url, 425), Data(body.utf8))
+            }
+            if url.path.hasSuffix("/reporting/reports/\(existingId)") {
+                let body = #"{"reportId":"\#(existingId)","status":"COMPLETED","url":"https://s3.example.com/r.gz"}"#
+                return (response(url, 200), Data(body.utf8))
+            }
+            return (response(url, 200), gzip)
+        }
+
+        let request = ReportRequest.spCampaigns(
+            name: "t", startDate: "2026-05-12", endDate: "2026-06-10",
+            timeUnit: "SUMMARY", columns: CampaignReportRow.summaryColumns
+        )
+        let rows = try await makeRepository().fetchCampaignRows(request)
+        XCTAssertEqual(rows.first?.campaignId, "1")
+    }
+
+    func testDuplicateReportWithUnparseableBodyStillThrows() async {
+        MockURLProtocol.handler = { [response] request in
+            (response(request.url!, 425), Data(#"{"code":"425"}"#.utf8))
+        }
+        let request = ReportRequest.spSearchTerm(name: "t", startDate: "2026-05-12", endDate: "2026-06-10")
+        do {
+            _ = try await makeRepository().createReport(request)
+            XCTFail("Expected failure")
+        } catch let ReportError.http(status, _) {
+            XCTAssertEqual(status, 425)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testDuplicateReportIdParsing() {
+        let body = #"{"code":"425","detail":"The Request is a duplicate of : abc-123-def"}"#
+        XCTAssertEqual(ReportingRepository.duplicateReportId(from: body), "abc-123-def")
+        XCTAssertNil(ReportingRepository.duplicateReportId(from: #"{"code":"425"}"#))
+        XCTAssertNil(ReportingRepository.duplicateReportId(from: nil))
+    }
+
     func testFailedReportThrows() async {
         MockURLProtocol.handler = { [response] request in
             let url = request.url!

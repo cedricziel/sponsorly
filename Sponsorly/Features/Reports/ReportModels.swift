@@ -130,6 +130,22 @@ struct CreateReportResponse: Decodable {
     let status: String?
 }
 
+/// Error body Amazon returns for a duplicate report request (HTTP 425). The
+/// existing report's id is embedded in `detail`, e.g.
+/// `"The Request is a duplicate of : 77af9ece-1c6b-47d1-a6b1-79910c35e661"`.
+struct DuplicateReportError: Decodable {
+    let code: String?
+    let detail: String?
+
+    /// The id of the already-registered report, parsed out of `detail`.
+    var existingReportId: String? {
+        guard let detail else { return nil }
+        let token = detail.split(whereSeparator: { $0 == " " || $0 == ":" }).last.map(String.init)
+        guard let token, token.contains("-") else { return nil }
+        return token
+    }
+}
+
 /// `getAsyncReport` status response.
 struct ReportStatusResponse: Decodable {
     let reportId: String
