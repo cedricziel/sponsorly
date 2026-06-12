@@ -18,20 +18,24 @@ struct AccountSwitcher: View {
             }
         } label: {
             if let profile = accounts.activeProfile {
-                HStack(spacing: 4) {
+                pill {
                     Text(CountryFlag.emoji(profile.countryCode) ?? "🏷️")
-                    Text(profile.accountName)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
                     Image(systemName: "chevron.down")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-                .font(.subheadline)
+                .accessibilityLabel(profile.accountName)
             } else {
-                Label("Account", systemImage: "person.crop.circle")
+                pill {
+                    Image(systemName: "person.crop.circle")
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Account")
             }
         }
+        .buttonStyle(.plain)
         .sheet(isPresented: $isPickerPresented) {
             NavigationStack {
                 AccountsView()
@@ -42,6 +46,15 @@ struct AccountSwitcher: View {
                     }
             }
         }
+    }
+
+    /// A compact capsule wrapper used for both the selected and empty states.
+    private func pill(@ViewBuilder _ content: () -> some View) -> some View {
+        HStack(spacing: 4) { content() }
+            .font(.subheadline)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(.regularMaterial, in: .capsule)
     }
 }
 
