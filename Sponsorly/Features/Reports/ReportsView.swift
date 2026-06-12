@@ -122,6 +122,7 @@ struct ReportsView: View {
                 }
                 .frame(height: 140)
                 .chartXSelection(value: $selectedDate)
+                .sensoryFeedback(.selection, trigger: selectedPoint?.id)
             }
         }
     }
