@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ReportsView: View {
     @Environment(AccountsViewModel.self) private var accounts
+    @Environment(\.switchTab) private var switchTab
     @State private var model = SpendOverviewViewModel()
     @State private var selectedDate: Date?
 
@@ -23,6 +24,7 @@ struct ReportsView: View {
         NavigationStack {
             content
                 .navigationTitle("Overview")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         AccountSwitcher()
@@ -36,11 +38,14 @@ struct ReportsView: View {
     @ViewBuilder
     private var content: some View {
         if accounts.activeSelection == nil {
-            ContentUnavailableView(
-                "No Account Selected",
-                systemImage: "person.crop.circle",
-                description: Text("Choose an advertising account to see your spend.")
-            )
+            ContentUnavailableView {
+                Label("No Account Selected", systemImage: "person.crop.circle")
+            } description: {
+                Text("Choose an advertising account to see your spend.")
+            } actions: {
+                Button("Go to Settings") { switchTab(.settings) }
+                    .buttonStyle(.borderedProminent)
+            }
         } else if model.isLoading, model.isEmpty {
             ProgressView("Loading overview…")
         } else if let error = model.errorMessage, model.isEmpty {

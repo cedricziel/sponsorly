@@ -66,6 +66,36 @@ final class AdvertisingAccountAggregatorTests: XCTestCase {
         )
         XCTAssertEqual(result.map(\.accountName), ["Apple", "Zed"])
     }
+
+    func testStandaloneProfileCarriesCurrency() {
+        let result = AdvertisingAccountAggregator.profiles(
+            profiles: [profile("1", name: "Alpha")], managerAccounts: [], region: .europe
+        )
+        XCTAssertEqual(result.first?.currencyCode, "EUR")
+    }
+
+    func testLinkedProfileHasNoCurrency() {
+        // Manager-linked accounts don't expose a currency, only a marketplace.
+        let result = AdvertisingAccountAggregator.profiles(
+            profiles: [], managerAccounts: [manager("Agency", linked: [("2", "Beta")])],
+            region: .europe
+        )
+        XCTAssertNil(result.first?.currencyCode)
+    }
+}
+
+@MainActor
+final class AccountsViewModelNavigationTests: XCTestCase {
+    func testHasConnectedRegionsFalseWhenNotSignedIn() {
+        // Drives the AccountSwitcher's "send to Settings" gate.
+        let model = AccountsViewModel.previewModel(auth: .previewModel(connected: []))
+        XCTAssertFalse(model.hasConnectedRegions)
+    }
+
+    func testHasConnectedRegionsTrueWhenSignedIn() {
+        let model = AccountsViewModel.previewModel(auth: .previewModel(connected: [.europe]))
+        XCTAssertTrue(model.hasConnectedRegions)
+    }
 }
 
 final class MarketplaceTests: XCTestCase {
@@ -192,7 +222,7 @@ final class AccountsRepositoryTests: XCTestCase {
         }
         let accounts = await makeRepository().discover([
             .northAmerica: { "tok" },
-            .europe: { "tok" }
+            .europe: { "tok" },
         ])
         XCTAssertEqual(accounts.profiles.count, 1) // only NA
         XCTAssertNotNil(accounts.failures[.europe])

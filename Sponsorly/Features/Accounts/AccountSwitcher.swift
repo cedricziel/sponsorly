@@ -5,11 +5,17 @@ import SwiftUI
 /// from the environment, so it stays in sync everywhere it appears.
 struct AccountSwitcher: View {
     @Environment(AccountsViewModel.self) private var accounts
+    @Environment(\.switchTab) private var switchTab
     @State private var isPickerPresented = false
 
     var body: some View {
         Button {
-            isPickerPresented = true
+            // No accounts to pick yet — send the user to Settings to sign in.
+            if accounts.hasConnectedRegions {
+                isPickerPresented = true
+            } else {
+                switchTab(.settings)
+            }
         } label: {
             if let profile = accounts.activeProfile {
                 HStack(spacing: 4) {
