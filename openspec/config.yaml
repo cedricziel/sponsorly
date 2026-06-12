@@ -1,0 +1,93 @@
+schema: spec-driven
+
+# Project context — shown to AI when creating artifacts.
+context: |
+  Sponsorly — iOS app for managing Amazon Ads campaigns (Sponsored Products,
+  Brands, Display). Moving from read-only entity browser toward an optimization
+  tool (spend overview, search-term harvesting, future bid/budget writes).
+
+  ## Stack
+  Swift 5.10, strict concurrency (SWIFT_STRICT_CONCURRENCY=complete). SwiftUI,
+  iOS 26+. State via the Observation framework (@Observable), not
+  ObservableObject/Combine. Swift Charts. XCTest. The .xcodeproj is generated
+  from project.yml by XcodeGen and is git-ignored — never hand-edit it; run
+  `xcodegen generate` after adding/moving/deleting a .swift file.
+
+  ## Amazon Ads access — library-first (required)
+  All Amazon Ads + LWA access goes through the swift-amazon-ads package
+  (github.com/cedricziel/swift-amazon-ads), wired in project.yml: AmazonAdsCore,
+  AmazonAdsProfilesAPIv2, AmazonAdsSponsoredProductsAPIv3,
+  AmazonAdsReportingAPIv3. Prefer its generated clients + AuthenticatedTransport
+  (carried by ScopedClient) for every call — do NOT hand-roll URLSession
+  requests against the Ads API when the library already covers it.
+  If the library can't do what a change needs, EVOLVE THE LIBRARY: open a PR on
+  swift-amazon-ads, land it, and consume the new version — do not work around
+  the gap with bespoke request-building in the app. A change that needs a
+  missing endpoint/field lists the upstream library PR as a task/dependency.
+
+  ## Architecture — MVVM + Repository (required)
+  Every feature lives in Sponsorly/Features/<Name>/ and is built from layers.
+  No business logic in views, no networking in view models.
+  - View (*View.swift): SwiftUI only — layout, bindings, #Preview. Reads state
+    off a view model; sends intent via async methods/bindings.
+  - ViewModel (*ViewModel.swift): @MainActor @Observable final class. State as
+    `private(set) var` + a mutable `var errorMessage: String?`. async intent
+    methods (e.g. load(using:)). Orchestrates repositories; never touches
+    URLSession. Concurrent fetches use `async let`; one failing source
+    degrades only its own tile, not the screen.
+  - Repository (*Repository.swift): an `actor` owning one capability's data
+    access. Dependencies INJECTED — a ScopedClient and a
+    `urlSession: URLSession = .shared` — so tests run offline. No SwiftUI
+    import.
+  - Models: plain Sendable value types; Codable at the API boundary.
+  - Errors: per-domain `enum: LocalizedError` with user-facing
+    errorDescription (see ReportError). View models surface it into
+    errorMessage; views render it.
+
+  ## Testing — TDD (required)
+  Test-first: write the failing test, then implement. XCTest,
+  `@testable import Sponsorly`, one SponsorlyTests/<Feature>Tests.swift per
+  feature. Two seams:
+  - Pure logic: extract scoring/aggregation/bucketing as `static` funcs on the
+    view model (e.g. aggregateHeadline, topCampaigns) and test directly — no
+    async, no network. This is the primary seam.
+  - Network: inject a URLSession backed by MockURLProtocol to drive repository
+    request/response/status paths, including error and retry branches (e.g. the
+    425-duplicate report reuse). Never hit the live API in tests.
+
+  ## Domain
+  Amazon Ads API (NOT Seller/SP-API). OAuth 2.0 via Login with Amazon; refresh
+  token exchanged for Ads access tokens scoped per advertising profile. Most
+  calls need both `Authorization: Bearer <token>` and
+  `Amazon-Advertising-API-Scope: <profileId>` — carried by ScopedClient, hence
+  repository injection. Reporting uses the async Reporting API v3
+  (create → poll → download → gunzip → decode); past-day reports are immutable
+  and cached. Verify endpoints via context7 — the v2→v3 migration is ongoing.
+
+  ## Constraints
+  - Secrets never in the repo: LWA/Ads credentials live in Keychain at runtime;
+    *.env and secrets.plist are git-ignored.
+  - Strict concurrency: cross-isolation types are Sendable; UI is @MainActor.
+  - Writes are real money: campaign/keyword writes must report per-item outcomes
+    (added / skipped-duplicate / failed) and ship with mocked-write tests.
+  - Commits: semantic (feat/fix/chore/refactor/docs/test), one logical change
+    each. Run `make lint` and `make format` before committing.
+
+# Per-artifact rules — enforced when generating each artifact.
+rules:
+  proposal:
+    - Name the capability; note if it adds or reuses View/ViewModel/Repository.
+    - State the test seam up front — pure-function testable vs. mocked-network.
+    - Use swift-amazon-ads for Ads/LWA calls; if it lacks what's needed, the
+      proposal calls for an upstream library PR, not an in-app workaround.
+  design:
+    - Show the MVVM split — ViewModel state and Repository (actor) reads/writes.
+    - List injected deps (ScopedClient, URLSession) and new error cases.
+    - Note how the ViewModel surfaces errorMessage to the view.
+  tasks:
+    - TDD — interleave test tasks with implementation; tests are not appended.
+    - Pair every new scoring/aggregation func and error branch with a test task.
+    - Add an `xcodegen generate` task when a .swift file is added/moved/deleted.
+    - When swift-amazon-ads lacks a needed call, add a task for the upstream
+      library PR and bumping the dependency — before the app task that uses it.
+    - A capability task is not done until its tests are green.
