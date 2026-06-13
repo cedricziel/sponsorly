@@ -22,7 +22,7 @@ final class HarvestViewModel {
 
     let sourceCampaign: Campaign
     private let accounts: AccountsViewModel
-    private let cache = ReportCache()
+    private let store = ReportStore.shared
 
     var step: Step = .criteria
     var criteria = HarvestCriteria()
@@ -91,7 +91,7 @@ final class HarvestViewModel {
         )
         // The report covers "30 days ending yesterday" (immutable) and spans the
         // whole profile, so a cached copy is reused across harvests of any campaign.
-        if let cached: [SearchTermReportRow] = await cache.load(cacheKey, as: SearchTermReportRow.self) {
+        if let cached: [SearchTermReportRow] = await store.load(cacheKey, as: SearchTermReportRow.self) {
             apply(rows: cached)
             return
         }
@@ -99,7 +99,7 @@ final class HarvestViewModel {
         do {
             let rows: [SearchTermReportRow] = try await ReportingRepository(scopedClient: scoped)
                 .fetchRows(request)
-            await cache.save(rows, for: cacheKey, ttl: ReportCache.immutableTTL)
+            await store.save(rows, for: cacheKey)
             apply(rows: rows)
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription

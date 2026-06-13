@@ -59,6 +59,10 @@ struct ReportsView: View {
         } else {
             ScrollView {
                 VStack(spacing: 16) {
+                    if let lastUpdated = model.lastUpdated {
+                        FreshnessLabel(date: lastUpdated)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                     headlineTiles
                     todayTile
                     if !model.trend.isEmpty { trendCard }
@@ -168,6 +172,23 @@ struct MetricTile: View {
     }
 }
 
+/// A subtle "last updated N ago" caption. It shows the data's *age* rather than
+/// implying it is live: the overnight refresh is OS-governed and not guaranteed,
+/// so figures may be hours old.
+struct FreshnessLabel: View {
+    let date: Date
+
+    var body: some View {
+        Label {
+            Text("Updated \(date.formatted(.relative(presentation: .named)))")
+        } icon: {
+            Image(systemName: "clock.arrow.circlepath")
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+    }
+}
+
 /// A rounded card container used across the overview.
 struct OverviewCard<Content: View>: View {
     @ViewBuilder var content: Content
@@ -199,4 +220,12 @@ enum Money {
 #Preview {
     ReportsView()
         .environment(AccountsViewModel.previewModel())
+}
+
+#Preview("Freshness — stale") {
+    VStack(spacing: 12) {
+        FreshnessLabel(date: Date(timeIntervalSinceNow: -3 * 3600))
+        FreshnessLabel(date: Date(timeIntervalSinceNow: -26 * 3600))
+    }
+    .padding()
 }
