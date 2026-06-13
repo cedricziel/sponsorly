@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track the exact swift-amazon-ads pin in project.yml against GitHub releases.",
+      "managerFilePatterns": ["/^project\\.yml$/"],
+      "matchStrings": [
+        "url:\\s*https://github\\.com/cedricziel/swift-amazon-ads\\s+exactVersion:\\s*(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "cedricziel/swift-amazon-ads",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$",
+      "versioningTemplate": "semver"
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import AmazonAdsCore
 import Foundation
 
 /// The persisted active-profile pointer: a region plus its `profileId`.
-struct ActiveProfileSelection: Codable, Sendable, Equatable {
+struct ActiveProfileSelection: Codable, Equatable {
     let region: AmazonRegion
     let profileId: String
 }

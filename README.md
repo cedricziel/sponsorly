@@ -1,5 +1,7 @@
 # Sponsorly
 
+[![CI](https://github.com/cedricziel/sponsorly/actions/workflows/ci.yml/badge.svg)](https://github.com/cedricziel/sponsorly/actions/workflows/ci.yml)
+
 iOS app for managing Amazon Ads campaigns (Sponsored Products, Sponsored Brands, Sponsored Display).
 
 ## Requirements

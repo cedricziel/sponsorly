@@ -11,7 +11,7 @@ options:
 packages:
   AmazonAds:
     url: https://github.com/cedricziel/swift-amazon-ads
-    branch: main
+    exactVersion: 1.1.0
 
 settings:
   base:

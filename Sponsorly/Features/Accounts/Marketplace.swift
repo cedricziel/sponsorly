@@ -33,6 +33,6 @@ enum Marketplace {
         // Far East
         "A1VC38T7YXB528": "JP",
         "A39IBJ37TRP1C6": "AU",
-        "A19VAU5U5O7RUS": "SG"
+        "A19VAU5U5O7RUS": "SG",
     ]
 }

@@ -73,7 +73,7 @@ final class LWAAuthServiceTests: XCTestCase {
         var fields = [
             "\"access_token\":\"\(access)\"",
             "\"token_type\":\"bearer\"",
-            "\"expires_in\":\(expiresIn)"
+            "\"expires_in\":\(expiresIn)",
         ]
         if let refresh { fields.append("\"refresh_token\":\"\(refresh)\"") }
         return Data("{\(fields.joined(separator: ","))}".utf8)

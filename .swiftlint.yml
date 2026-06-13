@@ -10,3 +10,11 @@
 disabled_rules:
   - trailing_comma
   - opening_brace
+
+# Never lint build output or resolved Swift Package sources (CI writes both
+# under build/; XcodeGen writes the project under the repo root).
+excluded:
+  - build
+  - .build
+  - DerivedData
+  - Pods

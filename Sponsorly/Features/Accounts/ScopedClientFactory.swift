@@ -7,7 +7,7 @@ enum ScopedClientError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noActiveProfile:
-            return "Select an advertising profile before loading data."
+            "Select an advertising profile before loading data."
         }
     }
 }
@@ -16,7 +16,7 @@ enum ScopedClientError: LocalizedError {
 /// the active profile: the region base URL, the `client_id`, the `profileId`
 /// scope, a token provider, and a ready `AuthenticatedTransport` (for callers
 /// that prefer the generated clients).
-struct ScopedClient: Sendable {
+struct ScopedClient {
     let transport: AuthenticatedTransport
     let baseURL: URL
     let region: AmazonRegion

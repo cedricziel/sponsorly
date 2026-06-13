@@ -76,7 +76,7 @@ struct KeychainTokenStorage: TokenStorageProtocol {
             TokenStorageKey.accessToken,
             TokenStorageKey.refreshToken,
             TokenStorageKey.tokenExpiry,
-            TokenStorageKey.profileId
+            TokenStorageKey.profileId,
         ]
         for key in keys {
             try await delete(for: key, region: region)
@@ -93,7 +93,7 @@ struct KeychainTokenStorage: TokenStorageProtocol {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account(for: key, region: region)
+            kSecAttrAccount as String: account(for: key, region: region),
         ]
     }
 }

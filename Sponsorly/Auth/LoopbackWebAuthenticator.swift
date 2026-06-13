@@ -42,7 +42,7 @@ final class LoopbackWebAuthenticator: NSObject, SFSafariViewControllerDelegate {
         }
     }
 
-    // User tapped "Done" before completing sign-in. Delivered on the main thread.
+    /// User tapped "Done" before completing sign-in. Delivered on the main thread.
     nonisolated func safariViewControllerDidFinish(_: SFSafariViewController) {
         MainActor.assumeIsolated {
             finish(.failure(LWAError.userCancelled))
