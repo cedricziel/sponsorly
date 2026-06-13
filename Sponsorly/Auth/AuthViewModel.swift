@@ -27,8 +27,13 @@ final class AuthViewModel {
         }
     }
 
-    func isConnected(_ region: AmazonRegion) -> Bool { connectedRegions.contains(region) }
-    func isBusy(_ region: AmazonRegion) -> Bool { busyRegion == region }
+    func isConnected(_ region: AmazonRegion) -> Bool {
+        connectedRegions.contains(region)
+    }
+
+    func isBusy(_ region: AmazonRegion) -> Bool {
+        busyRegion == region
+    }
 
     /// Restores per-region connection state from stored refresh tokens.
     func restore() async {
@@ -54,7 +59,8 @@ final class AuthViewModel {
         do {
             let request = try await service.makeAuthorizationRequest()
             let callbackURL = try await authenticator.authenticate(
-                authorizeURL: request.url, port: config.callbackPort)
+                authorizeURL: request.url, port: config.callbackPort
+            )
             try await service.handleCallback(url: callbackURL, request: request)
             connectedRegions.insert(region)
         } catch LWAError.userCancelled {
@@ -90,12 +96,12 @@ final class AuthViewModel {
 }
 
 #if DEBUG
-extension AuthViewModel {
-    /// Preview/testing helper to force connection state.
-    static func previewModel(connected: Set<AmazonRegion>) -> AuthViewModel {
-        let model = AuthViewModel()
-        model.connectedRegions = connected
-        return model
+    extension AuthViewModel {
+        /// Preview/testing helper to force connection state.
+        static func previewModel(connected: Set<AmazonRegion>) -> AuthViewModel {
+            let model = AuthViewModel()
+            model.connectedRegions = connected
+            return model
+        }
     }
-}
 #endif

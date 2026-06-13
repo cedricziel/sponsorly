@@ -34,7 +34,9 @@ final class AccountsViewModel {
         AmazonRegion.allCases.filter { auth.connectedRegions.contains($0) }
     }
 
-    var hasConnectedRegions: Bool { !auth.connectedRegions.isEmpty }
+    var hasConnectedRegions: Bool {
+        !auth.connectedRegions.isEmpty
+    }
 
     var activeProfile: AdvertisingProfile? {
         guard let selection = activeSelection else { return nil }
@@ -107,22 +109,22 @@ final class AccountsViewModel {
 }
 
 #if DEBUG
-extension AccountsViewModel {
-    static func previewModel(auth: AuthViewModel = .previewModel(connected: [])) -> AccountsViewModel {
-        AccountsViewModel(auth: auth)
-    }
+    extension AccountsViewModel {
+        static func previewModel(auth: AuthViewModel = .previewModel(connected: [])) -> AccountsViewModel {
+            AccountsViewModel(auth: auth)
+        }
 
-    /// A model seeded with sample accounts for previews; `load()` won't overwrite it.
-    static func loaded(
-        _ accounts: ConnectedAccounts,
-        active: ActiveProfileSelection? = nil
-    ) -> AccountsViewModel {
-        let regions = Set(accounts.profiles.map(\.region)).union(accounts.failures.keys)
-        let model = AccountsViewModel(auth: .previewModel(connected: regions))
-        model.accounts = accounts
-        model.activeSelection = active
-        model.isPreviewSeeded = true
-        return model
+        /// A model seeded with sample accounts for previews; `load()` won't overwrite it.
+        static func loaded(
+            _ accounts: ConnectedAccounts,
+            active: ActiveProfileSelection? = nil
+        ) -> AccountsViewModel {
+            let regions = Set(accounts.profiles.map(\.region)).union(accounts.failures.keys)
+            let model = AccountsViewModel(auth: .previewModel(connected: regions))
+            model.accounts = accounts
+            model.activeSelection = active
+            model.isPreviewSeeded = true
+            return model
+        }
     }
-}
 #endif

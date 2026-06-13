@@ -56,11 +56,11 @@ final class AdGroupsViewModel {
 }
 
 #if DEBUG
-extension CampaignsViewModel {
-    static func loaded(_ campaigns: [Campaign]) -> CampaignsViewModel {
-        let model = CampaignsViewModel()
-        model.campaigns = campaigns
-        return model
+    extension CampaignsViewModel {
+        static func loaded(_ campaigns: [Campaign]) -> CampaignsViewModel {
+            let model = CampaignsViewModel()
+            model.campaigns = campaigns
+            return model
+        }
     }
-}
 #endif

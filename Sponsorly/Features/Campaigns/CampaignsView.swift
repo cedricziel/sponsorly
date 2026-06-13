@@ -124,7 +124,7 @@ struct CampaignStateBadge: View {
         Campaign(
             campaignId: "2", name: "Holiday Push", state: "PAUSED",
             targetingType: "MANUAL", budget: .init(budget: 100, budgetType: "DAILY")
-        )
+        ),
     ]
     return NavigationStack {
         List(campaigns) { CampaignRow(campaign: $0) }

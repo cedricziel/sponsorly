@@ -54,7 +54,7 @@ actor LWAAuthService {
             URLQueryItem(name: "redirect_uri", value: config.redirectURI),
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "code_challenge", value: challenge),
-            URLQueryItem(name: "code_challenge_method", value: "S256")
+            URLQueryItem(name: "code_challenge_method", value: "S256"),
         ]
         guard let url = components.url else { throw LWAError.invalidResponse }
         return LWAAuthorizationRequest(url: url, state: state, codeVerifier: verifier)
@@ -83,7 +83,7 @@ actor LWAAuthService {
             "redirect_uri": config.redirectURI,
             "client_id": config.clientID,
             "client_secret": config.clientSecret,
-            "code_verifier": request.codeVerifier
+            "code_verifier": request.codeVerifier,
         ])
         try await persist(response)
     }
@@ -155,7 +155,7 @@ actor LWAAuthService {
                 "grant_type": "refresh_token",
                 "refresh_token": refreshToken,
                 "client_id": config.clientID,
-                "client_secret": config.clientSecret
+                "client_secret": config.clientSecret,
             ])
             try await persist(response)
             return response.accessToken

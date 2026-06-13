@@ -46,7 +46,6 @@ struct SettingsView: View {
         }
     }
 
-    @ViewBuilder
     private func regionRow(_ region: AmazonRegion) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
