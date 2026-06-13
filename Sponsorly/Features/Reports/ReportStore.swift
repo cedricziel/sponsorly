@@ -17,12 +17,22 @@ actor ReportStore {
     /// and the background refresh task talk to this single instance.
     static let shared = ReportStore(modelContainer: sharedContainer)
 
-    /// One durable `ModelContainer` (SwiftData defaults to Application Support, which
-    /// the OS does not evict). Falls back to in-memory if the store can't be opened
-    /// so the app degrades to a session cache rather than crashing on launch.
+    /// One durable `ModelContainer` in Application Support (which the OS does not
+    /// evict). The directory is created explicitly — unlike Caches, iOS does not
+    /// create Application Support for us, and SwiftData's default store path assumes
+    /// it exists. Falls back to in-memory if the store can't be opened, so the app
+    /// degrades to a session cache rather than crashing on launch.
     static let sharedContainer: ModelContainer = {
         do {
-            return try ModelContainer(for: CachedReport.self)
+            let appSupport = try FileManager.default.url(
+                for: .applicationSupportDirectory, in: .userDomainMask,
+                appropriateFor: nil, create: true
+            )
+            let storeURL = appSupport.appendingPathComponent("Reports.store")
+            return try ModelContainer(
+                for: CachedReport.self,
+                configurations: ModelConfiguration(url: storeURL)
+            )
         } catch {
             // swiftlint:disable:next force_try
             return try! ModelContainer(
