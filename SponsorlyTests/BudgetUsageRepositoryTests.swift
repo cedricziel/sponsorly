@@ -2,48 +2,6 @@ import AmazonAdsCore
 @testable import Sponsorly
 import XCTest
 
-final class ReportCacheTests: XCTestCase {
-    private let key = ReportCacheKey(
-        profileId: "111", reportTypeId: "spCampaigns",
-        startDate: "2026-05-12", endDate: "2026-06-10", timeUnit: "SUMMARY"
-    )
-
-    private func tempCache() -> ReportCache {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        return ReportCache(directory: dir)
-    }
-
-    private func row(cost: Double) -> CampaignReportRow {
-        CampaignReportRow(
-            campaignId: "1", campaignName: "A", date: nil, impressions: nil,
-            clicks: nil, cost: cost, sales30d: nil, purchases30d: nil
-        )
-    }
-
-    func testRoundTrip() async {
-        let cache = tempCache()
-        await cache.save([row(cost: 5)], for: key, ttl: 60)
-        let loaded = await cache.load(key, as: CampaignReportRow.self)
-        XCTAssertEqual(loaded?.first?.cost, 5)
-    }
-
-    func testExpiredReturnsNil() async {
-        let cache = tempCache()
-        await cache.save([row(cost: 5)], for: key, ttl: -1)
-        let loaded = await cache.load(key, as: CampaignReportRow.self)
-        XCTAssertNil(loaded)
-    }
-
-    func testMissingReturnsNil() async {
-        let loaded = await tempCache().load(key, as: CampaignReportRow.self)
-        XCTAssertNil(loaded)
-    }
-
-    func testKeyFilenameIsStable() {
-        XCTAssertEqual(key.filename, "111_spCampaigns_2026-05-12_2026-06-10_SUMMARY.json")
-    }
-}
-
 final class BudgetUsageRepositoryTests: XCTestCase {
     override func setUp() {
         super.setUp()

@@ -13,10 +13,13 @@ final class SpendOverviewViewModel {
     private(set) var topCampaigns: [CampaignSpend] = []
     private(set) var trend: [DailySpend] = []
     private(set) var todaySpend: Double?
+    /// When the rendered report data was last refreshed (from the store entry), so
+    /// the UI can show its age rather than imply live freshness.
+    private(set) var lastUpdated: Date?
     private(set) var isLoading = false
     var errorMessage: String?
 
-    private let cache = ReportCache()
+    private let store = ReportStore.shared
     private static let topCampaignLimit = 5
     private static let reportTypeId = "spCampaigns"
 
@@ -45,9 +48,10 @@ final class SpendOverviewViewModel {
         let summaryKey = key(scoped, start: start, end: end, timeUnit: "SUMMARY")
         let dailyKey = key(scoped, start: start, end: end, timeUnit: "DAILY")
 
-        // Render cached report data immediately.
-        if let cached = await cache.load(summaryKey, as: CampaignReportRow.self) { applySummary(cached) }
-        if let cached = await cache.load(dailyKey, as: CampaignReportRow.self) { applyDaily(cached) }
+        // Render stored report data immediately, dated by when it was last written.
+        if let cached = await store.load(summaryKey, as: CampaignReportRow.self) { applySummary(cached) }
+        if let cached = await store.load(dailyKey, as: CampaignReportRow.self) { applyDaily(cached) }
+        if let meta = await store.metadata(summaryKey) { lastUpdated = meta.refreshedAt }
 
         // Refresh all three sources in parallel.
         async let todayTask = Self.fetchTodaySpend(scoped)
@@ -64,13 +68,15 @@ final class SpendOverviewViewModel {
         let daily = await dailyTask
 
         if let today { todaySpend = today }
+        let now = Date()
         if let summary {
             applySummary(summary)
-            await cache.save(summary, for: summaryKey, ttl: ReportCache.immutableTTL)
+            await store.save(summary, for: summaryKey, now: now)
+            lastUpdated = now
         }
         if let daily {
             applyDaily(daily)
-            await cache.save(daily, for: dailyKey, ttl: ReportCache.immutableTTL)
+            await store.save(daily, for: dailyKey, now: now)
         }
 
         if today == nil, summary == nil, daily == nil, headline == SpendMetrics(), trend.isEmpty {
@@ -99,6 +105,7 @@ final class SpendOverviewViewModel {
         topCampaigns = []
         trend = []
         todaySpend = nil
+        lastUpdated = nil
         errorMessage = nil
     }
 
@@ -185,3 +192,21 @@ final class SpendOverviewViewModel {
         return formatter
     }
 }
+
+#if DEBUG
+    extension SpendOverviewViewModel {
+        /// A populated model for previews; `updatedAgo` ages `lastUpdated` so the
+        /// freshness indicator can be previewed in a stale state.
+        static func preview(updatedAgo: TimeInterval = 3600) -> SpendOverviewViewModel {
+            let model = SpendOverviewViewModel()
+            model.headline = SpendMetrics(spend: 1240.50, sales: 5310.00)
+            model.topCampaigns = [
+                CampaignSpend(campaignId: "1", name: "SP | Brand | Exact", spend: 420, sales: 1900),
+                CampaignSpend(campaignId: "2", name: "SP | Auto | Discovery", spend: 360, sales: 980),
+            ]
+            model.todaySpend = 48.20
+            model.lastUpdated = Date(timeIntervalSinceNow: -updatedAgo)
+            return model
+        }
+    }
+#endif
