@@ -30,23 +30,23 @@ PR1 = groups 1–4 (durable store, pure refactor + freshness age). PR2 = groups 
 
 ## 5. Project config for background execution (PR2)
 
-- [ ] 5.1 In `project.yml` Info.plist: add `BGTaskSchedulerPermittedIdentifiers` with `com.cedricziel.sponsorly.nightly-refresh` and `UIBackgroundModes` including `processing`
-- [ ] 5.2 Ensure the `AfterFirstUnlock` Keychain accessibility from 1.2 is in place; `xcodegen generate`; build
+- [x] 5.1 `project.yml` Info.plist: added `UIBackgroundModes: [processing]` and `BGTaskSchedulerPermittedIdentifiers: [com.cedricziel.sponsorly.nightly-refresh]`
+- [x] 5.2 Keychain is already `AfterFirstUnlockThisDeviceOnly` (1.2); `xcodegen generate`; app builds green
 
 ## 6. Refresh queue policy (PR2)
 
-- [ ] 6.1 Write failing tests for queue ordering (active-profile overview → other profiles' overviews → harvesting tail), next-item selection from staleness, and the reschedule decision (drain vs cut-short)
-- [ ] 6.2 Implement the queue policy as pure funcs: build the work list from connected profiles × report types, order by priority, and select the next stale item; reclaim `refreshing` items older than one window
-- [ ] 6.3 Implement the per-item fetch step reusing `ReportingRepository` (no hand-rolled Ads requests): mark `refreshing` → fetch → `save`/`markFailed`; one failed profile is skipped, not fatal (mocked-network tests)
+- [x] 6.1 Added `RefreshQueueTests` (ordering: active overview → other overviews → harvesting tail; active-not-in-list ignored; cache-key shape) and `NightlyRefreshEngineTests` (full drain, skip-already-fresh, cut-short→incomplete, missing-client→failed) — `Sponsorly/Background/`
+- [x] 6.2 `RefreshQueueBuilder.build(profiles:active:)` (pure) + `RefreshTask`/`RefreshReportKind`/`RefreshProfileRef` with `cacheKey`/`request` derivation matching the on-screen shape. Reclaim handled by `ReportStore.isStale` (`refreshing` past `reclaimAfter`); resumable skip via new `ReportStore.needsRefresh`
+- [x] 6.3 `ReportingReportRefresher` (live) marks `refreshing` → `ReportingRepository.fetchRows` → `save`/`markFailed`; `NightlyRefreshEngine` drains with a mockable `ReportRefreshing` seam, skips fresh, stops on `shouldContinue`, marks a profile `failed` when no client and continues
 
 ## 7. Background task wiring (PR2)
 
-- [ ] 7.1 Implement `BackgroundRefreshScheduler`: register the single task handler, schedule a request (requires external power, future `earliestBeginDate`), and a `schedule()` called on app background/launch
-- [ ] 7.2 Implement the task handler: drain the queue, check `expirationHandler`/remaining time after each item, complete the task exactly once, and reschedule (follow-up on cut-short, next-night on drain)
-- [ ] 7.3 Register and schedule from `SponsorlyApp`; `xcodegen generate`; build
+- [x] 7.1 `BackgroundRefreshScheduler.register()` (single identifier) + `schedule()` (requires external power + network, future `earliestBeginDate`)
+- [x] 7.2 `handle(_:)` reschedules next-night first, wires `expirationHandler` to a `CancellationFlag`, drains via `runRefresh(shouldContinue:)`, and calls `setTaskCompleted` exactly once with the drain result. Headless bootstrap builds providers per region (LWAAuthService), discovers profiles, builds the queue
+- [x] 7.3 `SponsorlyApp.init` registers; `.onChange(of: scenePhase)` schedules on background; `xcodegen generate`; builds green
 
 ## 8. Verification (PR2)
 
-- [ ] 8.1 Exercise the task via the scheduler debug path (`e -l objc -- (void)[...]` launch simulation / `simctl` background-fetch trigger) and confirm entries land in the store with updated `refreshedAt`
-- [ ] 8.2 Verify a cut-short window reschedules and a resumed run skips already-`fresh` items; verify a profile auth failure skips without aborting the queue
-- [ ] 8.3 Run full test suite; `make lint` and `make format`; commit PR2
+- [~] 8.1 **Deferred (manual device path).** Triggering the live `BGProcessingTask` needs an on-device/simulator lldb `_simulateLaunchForTaskWithIdentifier:` against a running app — out of scope for the unit seam and the user's preference against slow sim cycles. The drain logic it would exercise is unit-covered (below). To run later: launch on device, background, pause in lldb, `e -l objc -- (void)[[BGTaskScheduler sharedScheduler] _simulateLaunchForTaskWithIdentifier:@"com.cedricziel.sponsorly.nightly-refresh"]`.
+- [x] 8.2 Covered by `NightlyRefreshEngineTests`: cut-short → `completed == false` (handler reschedules a follow-up before draining); resumed run skips already-`fresh` items; a profile with no client is marked `failed` and the queue continues. Reschedule-on-drain/cut-short is in `handle(_:)` by inspection.
+- [x] 8.3 Full suite **101/101 pass**; `swiftformat` clean; `swiftlint` clean. PR2 ready to commit.
