@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Cancel an in-flight run when the same ref is pushed again.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build, test & lint
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      SPM_CACHE: build/SourcePackages
+      DERIVED_DATA: build/DerivedData
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          set -euo pipefail
+          # Pick the newest installed Xcode 26.x; fall back to the image default.
+          XCODE=$(ls -d /Applications/Xcode_26* 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$XCODE" ]; then
+            sudo xcode-select -s "$XCODE/Contents/Developer"
+          fi
+          xcodebuild -version
+          swift --version
+
+      - name: Install tools (XcodeGen, SwiftFormat, SwiftLint)
+        run: brew install xcodegen swiftformat swiftlint
+
+      - name: Synthesize placeholder Secrets.xcconfig
+        # Real LWA credentials are only needed at runtime, never to build/test.
+        run: cp Secrets.example.xcconfig Secrets.xcconfig
+
+      - name: Generate Xcode project
+        run: make generate
+
+      - name: Cache Swift Package dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SPM_CACHE }}
+          # project.yml carries the exact swift-amazon-ads pin, so the key only
+          # changes when a Renovate PR bumps it.
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Resolve dependencies
+        run: make resolve SPM_CACHE="$SPM_CACHE"
+
+      - name: Lint & format check
+        run: make lint
+
+      - name: Select simulator destination
+        id: dest
+        run: |
+          set -euo pipefail
+          # Prefer iPhone 17 Pro; otherwise fall back to the newest available iPhone.
+          if xcrun simctl list devices available | grep -q "iPhone 17 Pro"; then
+            DEST="platform=iOS Simulator,name=iPhone 17 Pro"
+          else
+            NAME=$(xcrun simctl list devices available \
+              | grep -Eo 'iPhone [0-9][^(]*' | tail -1 | sed 's/[[:space:]]*$//')
+            DEST="platform=iOS Simulator,name=${NAME}"
+          fi
+          echo "Using destination: $DEST"
+          echo "destination=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Build for testing
+        run: make build-for-testing SPM_CACHE="$SPM_CACHE" DERIVED_DATA="$DERIVED_DATA"
+
+      - name: Run tests
+        run: |
+          make test-without-building \
+            DERIVED_DATA="$DERIVED_DATA" \
+            DESTINATION="${{ steps.dest.outputs.destination }}"
