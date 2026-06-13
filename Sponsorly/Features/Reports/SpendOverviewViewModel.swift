@@ -53,8 +53,18 @@ final class SpendOverviewViewModel {
         if let cached = await store.load(dailyKey, as: CampaignReportRow.self) { applyDaily(cached) }
         if let meta = await store.metadata(summaryKey) { lastUpdated = meta.refreshedAt }
 
-        // Refresh all three sources in parallel.
-        async let todayTask = Self.fetchTodaySpend(scoped)
+        // "Today so far" is live intraday data (a quick budget-usage call), so
+        // always refresh it on open.
+        if let today = await Self.fetchTodaySpend(scoped) { todaySpend = today }
+
+        // The 30-day reports end yesterday and are immutable once written, so only
+        // re-download them when the stored copy is missing or stale — otherwise the
+        // warm copy (rendered above, possibly warmed overnight) stands. Without this
+        // the slow report lifecycle would re-run on every open.
+        let summaryStale = await store.needsRefresh(summaryKey)
+        let dailyStale = await store.needsRefresh(dailyKey)
+        guard summaryStale || dailyStale else { return }
+
         async let summaryTask = Self.fetchReport(
             scoped, start: start, end: end, timeUnit: "SUMMARY",
             columns: CampaignReportRow.summaryColumns
@@ -63,11 +73,9 @@ final class SpendOverviewViewModel {
             scoped, start: start, end: end, timeUnit: "DAILY",
             columns: CampaignReportRow.dailyColumns
         )
-        let today = await todayTask
         let summary = await summaryTask
         let daily = await dailyTask
 
-        if let today { todaySpend = today }
         let now = Date()
         if let summary {
             applySummary(summary)
@@ -79,7 +87,8 @@ final class SpendOverviewViewModel {
             await store.save(daily, for: dailyKey, now: now)
         }
 
-        if today == nil, summary == nil, daily == nil, headline == SpendMetrics(), trend.isEmpty {
+        // Only an error if we actually tried to refresh and rendered nothing.
+        if summary == nil, daily == nil, headline == SpendMetrics(), trend.isEmpty {
             errorMessage = "Couldn't load your spend overview."
         }
     }
