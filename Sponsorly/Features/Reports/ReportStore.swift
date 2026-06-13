@@ -50,6 +50,18 @@ actor ReportStore {
         return ReportMetadata(refreshedAt: report.refreshedAt, status: report.status)
     }
 
+    /// Whether a key should be fetched: `true` when there is no entry, or the
+    /// existing entry is stale. Drives the background queue's resumable skip —
+    /// an already-fresh report (warmed earlier the same night, or an immutable
+    /// past range) is left alone.
+    func needsRefresh(_ key: ReportCacheKey, now: Date = Date(), policy: StalenessPolicy = .default) -> Bool {
+        guard let report = fetch(key) else { return true }
+        return Self.isStale(
+            report.status, endDate: report.endDate, refreshedAt: report.refreshedAt,
+            now: now, policy: policy
+        )
+    }
+
     /// Keys whose entries should be refreshed, given the current time and the
     /// staleness policy. In-flight (`refreshing`) entries are excluded unless they
     /// have been stuck longer than the policy's reclaim window.
